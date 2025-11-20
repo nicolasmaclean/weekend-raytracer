@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
-project(TRACER)
+project(tracer)
 
-add_executable(TRACER main.cpp)
+add_executable(tracer main.cpp)

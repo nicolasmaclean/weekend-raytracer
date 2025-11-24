@@ -36,6 +36,11 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+11/23 8:15pm
+
+- finished section 5
+- (still haven't figured out clangd T_T)
+
 11/21 2:26pm
 
 - almost finished section 5

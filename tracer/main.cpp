@@ -9,8 +9,8 @@ bool hit_sphere(const point3 &center, double radius, const ray &r) {
   auto a = dot(r.direction(), r.direction());
   auto b = -2.0 * dot(r.direction(), c_to_ro);
   auto c = dot(c_to_ro, c_to_ro) - radius * radius;
-  double descriminant = b * b - 4 * a * c;
-  return (a >= 0);
+  double discriminant = b * b - 4 * a * c;
+  return (discriminant >= 0);
 }
 
 color ray_color(const ray &r) {

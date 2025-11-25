@@ -1,21 +1,12 @@
-#include <iostream>
+#include "hittable.h"
+#include "hittable_list.h"
+#include "sphere.h"
+#include "tracer.h"
 
-#include "color.h"
-#include "ray.h"
-#include "vec3.h"
-
-bool hit_sphere(const point3 &center, double radius, const ray &r) {
-  vec3 c_to_ro = center - r.origin();
-  auto a = dot(r.direction(), r.direction());
-  auto b = -2.0 * dot(r.direction(), c_to_ro);
-  auto c = dot(c_to_ro, c_to_ro) - radius * radius;
-  double discriminant = b * b - 4 * a * c;
-  return (discriminant >= 0);
-}
-
-color ray_color(const ray &r) {
-  if (hit_sphere(point3(0, 0, -1), 0.5, r)) {
-    return color(1, 0, 0);
+color ray_color(const ray &r, const hittable &world) {
+  hit_info info;
+  if (world.hit(r, interval(0, infinity), info)) {
+    return 0.5 * (info.normal + color(1, 1, 1));
   }
 
   vec3 dir = unit_vector(r.direction());
@@ -48,6 +39,11 @@ int main() {
   vec3 viewport_topleft_px =
       viewport_topleft + 0.5 * (viewport_du + viewport_dv);
 
+  // Setup up the world!
+  hittable_list world;
+  world.add(make_shared<sphere>(vec3(0, 0, -1), 0.5));
+  world.add(make_shared<sphere>(vec3(0, -100.5, -1), 100));
+
   // render!
   std::cout << "P3\n" << width << " " << height << "\n255\n";
   for (int v = 0; v < height; v++) {
@@ -57,7 +53,7 @@ int main() {
       vec3 pixel_center =
           viewport_topleft_px + (u * viewport_du) + (v * viewport_dv);
       ray cam_to_px = ray(camera_position, pixel_center - camera_position);
-      color pixel_color = ray_color(cam_to_px);
+      color pixel_color = ray_color(cam_to_px, world);
       write_color(std::cout, pixel_color);
     }
   }

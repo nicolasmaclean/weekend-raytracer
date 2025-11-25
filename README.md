@@ -36,6 +36,12 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+11/25 4:11pm
+
+- finish section 6
+- abstracted sphere into hittable interface
+- extended hittable into a list for the whole world!
+
 11/23 8:15pm
 
 - finished section 5

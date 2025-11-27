@@ -9,6 +9,7 @@ class camera
 public:
   int width_px = 400;
   double aspect_ratio = 16.0 / 9.0;
+  int aa_samples_per_pixels = 100;
 
   void render(const hittable &world)
   {
@@ -18,11 +19,12 @@ public:
     for (int v = 0; v < height_px; v++) {
       std::clog << "\rScanlines remaining: " << height_px - v << "       " << std::flush;
       for (int u = 0; u < width_px; u++) {
-        vec3 pixel_center = viewport_origin + (u * viewport_du) + (v * viewport_dv);
-        ray cam_to_px = ray(center, pixel_center - center);
-        color pixel_color = ray_color(cam_to_px, world);
-        write_color(std::cout, pixel_color);
-        // break;
+        color pixel_color(0, 0, 0);
+        for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
+          ray r = get_ray(u, v);
+          pixel_color += ray_color(r, world);
+        }
+        write_color(std::cout, aa_sample_scale * pixel_color);
       }
     }
 
@@ -35,10 +37,13 @@ private:
   point3 viewport_origin;
   vec3 viewport_du;
   vec3 viewport_dv;
+  double aa_sample_scale;
 
   void init()
   {
     center = point3(0, 0, 0);
+    aa_sample_scale = 1.0 / aa_samples_per_pixels;
+
     height_px = int(width_px / aspect_ratio);
     height_px = (height_px < 1) ? 1 : height_px;
     double vheight = 2;
@@ -76,4 +81,14 @@ private:
     double a = 0.5 * (unit_direction.y() + 1);
     return (1.0 - a) * color(1, 1, 1) + a * color(0.5, 0.7, 1);
   }
+
+  ray get_ray(int u, int v)
+  {
+    vec3 offset = sample_square();
+    vec3 pixel_sample =
+        viewport_origin + ((u + offset.x()) * viewport_du) + ((v + offset.y()) * viewport_dv);
+    return ray(center, pixel_sample - center);
+  }
+
+  vec3 sample_square() { return vec3(random_double(-0.5, 0.5), random_double(-0.5, 0.5), 0); }
 };

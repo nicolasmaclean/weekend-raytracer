@@ -2,7 +2,8 @@
 
 #include "tracer.h"
 
-class interval {
+class interval
+{
 public:
   double min, max;
 
@@ -14,6 +15,15 @@ public:
   double contains(double t) { return min <= t && t <= max; }
 
   double surrounds(double t) { return min < t && t < max; }
+
+  double clamp(double t) const
+  {
+    if (t > max)
+      return max;
+    if (t < min)
+      return min;
+    return t;
+  }
 
   static const interval empty, universe;
 };

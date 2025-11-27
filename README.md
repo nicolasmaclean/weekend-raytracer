@@ -36,6 +36,12 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+11/27 9:46am
+
+- finished section 7
+- spun out camera.h from main.cpp 
+- I had accidentally barely changed the camera initialization and it took forever to find and fix T_T
+
 11/25 4:11pm
 
 - finish section 6

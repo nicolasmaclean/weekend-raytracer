@@ -36,6 +36,11 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+11/28 9:18am
+
+- finished section 11
+- dialectric material (glass)
+
 11/26 and 11/27
 
 - finished section 7, 8, 9, and 10!

@@ -122,4 +122,13 @@ inline vec3 random_in_unit_sphere(const vec3 &normal)
 
 inline vec3 reflect(const vec3 &v, const vec3 &n) { return v - 2 * dot(v, n) * n; }
 
+// refractive_index_in / refractive_index_out
+inline vec3 refract(const vec3 &r, const vec3 &n, double relative_refractive_index)
+{
+  double cost_theta = std::fmin(dot(-r, n), 1);
+  auto r_out_perpendicular = relative_refractive_index * (r + cost_theta * n);
+  auto r_out_parallel = -n * std::sqrt(1 - r_out_perpendicular.length_sqr());
+  return r_out_perpendicular + r_out_parallel;
+}
+
 #endif

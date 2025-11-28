@@ -1,15 +1,18 @@
 #pragma once
 
 #include "hittable.h"
+#include "material.h"
 #include "tracer.h"
 #include "vec3.h"
+#include <cmath>
 
 class camera
 {
 public:
   int width_px = 400;
   double aspect_ratio = 16.0 / 9.0;
-  int aa_samples_per_pixels = 100;
+  int aa_samples_per_pixels = 50;
+  int max_bounces = 20;
 
   void render(const hittable &world)
   {
@@ -22,7 +25,7 @@ public:
         color pixel_color(0, 0, 0);
         for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
           ray r = get_ray(u, v);
-          pixel_color += ray_color(r, world);
+          pixel_color += ray_color(r, max_bounces, world);
         }
         write_color(std::cout, aa_sample_scale * pixel_color);
       }
@@ -69,12 +72,21 @@ private:
               << std::flush;
   }
 
-  color ray_color(const ray &r, const hittable &world)
+  color ray_color(const ray &r, int depth, const hittable &world)
   {
     hit_info hit;
 
-    if (world.hit(r, interval(0, infinity), hit)) {
-      return 0.5 * (hit.normal + color(1, 1, 1));
+    if (depth <= 0) {
+      return color(0, 0, 0);
+    }
+
+    if (world.hit(r, interval(0.001, infinity), hit)) {
+      color attenuation;
+      ray bounced;
+      if (hit.mat->scatter(r, hit, attenuation, bounced)) {
+        return attenuation * ray_color(bounced, depth - 1, world);
+      }
+      return color(0, 0, 0);
     }
 
     vec3 unit_direction = unit_vector(r.direction());

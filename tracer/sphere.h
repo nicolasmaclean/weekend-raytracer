@@ -4,13 +4,16 @@
 #include "hittable.h"
 #include "ray.h"
 
-class sphere : public hittable {
+class sphere : public hittable
+{
 public:
-  sphere(const point3 &center, const double radius)
-      : center(center), radius(radius) {}
+  sphere(const point3 &center, double radius, shared_ptr<material> material)
+      : center(center), radius(radius), mat(material)
+  {
+  }
 
-  bool hit(const ray &r, interval clipping_range,
-           hit_info &info) const override {
+  bool hit(const ray &r, interval clipping_range, hit_info &info) const override
+  {
     vec3 oc = center - r.origin();
     auto a = r.direction().length_sqr();
     auto h = dot(r.direction(), oc);
@@ -33,6 +36,7 @@ public:
     info.t = root;
     info.p = r.at(info.t);
     info.normal = (info.p - center) / radius;
+    info.mat = mat;
     vec3 outward_normal = (info.p - center) / radius;
     info.set_face_normal(r, outward_normal);
 
@@ -42,6 +46,7 @@ public:
 private:
   point3 center;
   double radius;
+  shared_ptr<material> mat;
 };
 
 #endif

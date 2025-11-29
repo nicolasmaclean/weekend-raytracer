@@ -36,6 +36,11 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+11/9 11:07am
+
+- finished section 12
+- positionable camera
+
 11/28 9:18am
 
 - finished section 11

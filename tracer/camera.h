@@ -11,8 +11,12 @@ class camera
 public:
   int width_px = 400;
   double aspect_ratio = 16.0 / 9.0;
+  double v_fov = 90;
   int aa_samples_per_pixels = 50;
   int max_bounces = 20;
+  point3 lookfrom = vec3(0, 0, 0);
+  point3 lookat = vec3(0, 0, -1);
+  vec3 vup = vec3(0, 1, 0);
 
   void render(const hittable &world)
   {
@@ -41,24 +45,31 @@ private:
   vec3 viewport_du;
   vec3 viewport_dv;
   double aa_sample_scale;
+  vec3 u, v, w;
 
   void init()
   {
     center = point3(0, 0, 0);
     aa_sample_scale = 1.0 / aa_samples_per_pixels;
+    center = lookfrom;
+    double focal_length = (lookat - lookfrom).length();
 
+    w = unit_vector(lookfrom - lookat);
+    u = unit_vector(cross(vup, w));
+    v = cross(w, u);
+
+    auto h = std::tan(degrees_to_radians(v_fov) / 2);
     height_px = int(width_px / aspect_ratio);
     height_px = (height_px < 1) ? 1 : height_px;
-    double vheight = 2;
+    double vheight = 2 * h * focal_length;
     double vwidth = vheight * (double(width_px) / height_px);
 
-    double focal_length = 1.0;
-    vec3 viewport_u = vec3(vwidth, 0, 0);
-    vec3 viewport_v = vec3(0, -vheight, 0);
+    vec3 viewport_u = vwidth * u;
+    vec3 viewport_v = -vheight * v;
     viewport_du = viewport_u / width_px;
     viewport_dv = viewport_v / height_px;
 
-    vec3 viewport_topleft = center - vec3(0, 0, focal_length) - viewport_u / 2 - viewport_v / 2;
+    vec3 viewport_topleft = center - focal_length * w - viewport_u / 2 - viewport_v / 2;
     viewport_origin = viewport_topleft + 0.5 * (viewport_du + viewport_dv);
 
     std::clog << "\nCamera settings\n"

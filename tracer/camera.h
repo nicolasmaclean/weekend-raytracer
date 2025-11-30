@@ -17,6 +17,8 @@ public:
   point3 lookfrom = vec3(0, 0, 0);
   point3 lookat = vec3(0, 0, -1);
   vec3 vup = vec3(0, 1, 0);
+  double focus_dist = 10;
+  double defocus_angle = 0;
 
   void render(const hittable &world)
   {
@@ -46,13 +48,14 @@ private:
   vec3 viewport_dv;
   double aa_sample_scale;
   vec3 u, v, w;
+  vec3 defocus_u;
+  vec3 defocus_v;
 
   void init()
   {
     center = point3(0, 0, 0);
     aa_sample_scale = 1.0 / aa_samples_per_pixels;
     center = lookfrom;
-    double focal_length = (lookat - lookfrom).length();
 
     w = unit_vector(lookfrom - lookat);
     u = unit_vector(cross(vup, w));
@@ -61,7 +64,7 @@ private:
     auto h = std::tan(degrees_to_radians(v_fov) / 2);
     height_px = int(width_px / aspect_ratio);
     height_px = (height_px < 1) ? 1 : height_px;
-    double vheight = 2 * h * focal_length;
+    double vheight = 2 * h * focus_dist;
     double vwidth = vheight * (double(width_px) / height_px);
 
     vec3 viewport_u = vwidth * u;
@@ -69,8 +72,12 @@ private:
     viewport_du = viewport_u / width_px;
     viewport_dv = viewport_v / height_px;
 
-    vec3 viewport_topleft = center - focal_length * w - viewport_u / 2 - viewport_v / 2;
+    vec3 viewport_topleft = center - focus_dist * w - viewport_u / 2 - viewport_v / 2;
     viewport_origin = viewport_topleft + 0.5 * (viewport_du + viewport_dv);
+
+    double defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
+    defocus_u = u * defocus_radius;
+    defocus_v = v * defocus_radius;
 
     std::clog << "\nCamera settings\n"
               << "===============\n"
@@ -110,8 +117,14 @@ private:
     vec3 offset = sample_square();
     vec3 pixel_sample =
         viewport_origin + ((u + offset.x()) * viewport_du) + ((v + offset.y()) * viewport_dv);
-    return ray(center, pixel_sample - center);
+    vec3 origin = defocus_angle <= 0 ? center : defocus_disk_sample();
+    return ray(origin, pixel_sample - origin);
   }
 
+  vec3 defocus_disk_sample()
+  {
+    vec3 sample = random_unit_disk();
+    return center + (sample.x() * defocus_u) + (sample.y() * defocus_v);
+  }
   vec3 sample_square() { return vec3(random_double(-0.5, 0.5), random_double(-0.5, 0.5), 0); }
 };

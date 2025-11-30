@@ -120,6 +120,16 @@ inline vec3 random_in_unit_sphere(const vec3 &normal)
   }
 }
 
+inline vec3 random_unit_disk()
+{
+  while (true) {
+    vec3 v = vec3(random_double(-1, 1), random_double(-1, 1), 0);
+    if (v.length_sqr() < 1) {
+      return v;
+    }
+  }
+}
+
 inline vec3 reflect(const vec3 &v, const vec3 &n) { return v - 2 * dot(v, n) * n; }
 
 // refractive_index_in / refractive_index_out

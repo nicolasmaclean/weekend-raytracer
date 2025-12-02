@@ -4,7 +4,10 @@
 #include "material.h"
 #include "tracer.h"
 #include "vec3.h"
+#include <chrono>
 #include <cmath>
+
+using namespace std::chrono;
 
 class camera
 {
@@ -24,20 +27,31 @@ public:
   {
     init();
 
+    auto start = high_resolution_clock::now();
+
     std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
     for (int v = 0; v < height_px; v++) {
-      std::clog << "\rScanlines remaining: " << height_px - v << "       " << std::flush;
       for (int u = 0; u < width_px; u++) {
         color pixel_color(0, 0, 0);
         for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
           ray r = get_ray(u, v);
           pixel_color += ray_color(r, max_bounces, world);
         }
+
         write_color(std::cout, aa_sample_scale * pixel_color);
       }
+      auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start);
+      auto average_per_row = elapsed.count() / (v + 1);
+      std::clog << "\rScanlines remaining: " << height_px - v
+                << " (est time: " << average_per_row * (height_px - v + 1) / 1000 << "s)          "
+                << std::flush;
     }
 
-    std::clog << "\rDone!                        \n" << std::flush;
+    auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+    auto per_pixel = elapsed / (double(height_px) * width_px);
+    std::clog << "\rRendered in " << elapsed / double(1000) << "s (" << per_pixel
+              << "ms/px)                       \n"
+              << std::flush;
   }
 
 private:

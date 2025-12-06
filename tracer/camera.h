@@ -7,6 +7,11 @@
 #include <chrono>
 #include <cmath>
 
+#define MULTI_THREAD
+#ifdef MULTI_THREAD
+#include <omp.h>
+#endif
+
 using namespace std::chrono;
 
 class camera
@@ -26,10 +31,18 @@ public:
   void render(const hittable &world)
   {
     init();
+    unique_ptr<vec3[]> pixel_colors(new vec3[width_px * height_px]);
 
     auto start = high_resolution_clock::now();
 
-    std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
+#ifdef MULTI_THREAD
+    // int max_threads = std::thread::hardware_concurrency(); // typical default
+    int max_threads = 12;
+    omp_set_num_threads(max_threads);
+
+#pragma omp parallel for collapse(2) schedule(dynamic)
+#endif
+    // render scene to buffer
     for (int v = 0; v < height_px; v++) {
       for (int u = 0; u < width_px; u++) {
         color pixel_color(0, 0, 0);
@@ -38,13 +51,14 @@ public:
           pixel_color += ray_color(r, max_bounces, world);
         }
 
-        write_color(std::cout, aa_sample_scale * pixel_color);
+        int i = v * width_px + u;
+        pixel_colors[i] = aa_sample_scale * pixel_color;
       }
-      auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start);
-      auto average_per_row = elapsed.count() / (v + 1);
-      std::clog << "\rScanlines remaining: " << height_px - v
-                << " (est time: " << average_per_row * (height_px - v + 1) / 1000 << "s)          "
-                << std::flush;
+      // auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start);
+      // auto average_per_row = elapsed.count() / (v + 1);
+      // std::clog << "\rScanlines remaining: " << height_px - v
+      //           << " (est time: " << average_per_row * (height_px - v + 1) / 1000 << "s) "
+      //           << std::flush;
     }
 
     auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
@@ -52,6 +66,12 @@ public:
     std::clog << "\rRendered in " << elapsed / double(1000) << "s (" << per_pixel
               << "ms/px)                       \n"
               << std::flush;
+
+    // save pixels colors to file
+    std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
+    for (int i = 0; i < width_px * height_px; i++) {
+      write_color(std::cout, pixel_colors[i]);
+    }
   }
 
 private:

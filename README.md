@@ -36,7 +36,17 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
-11/9 11:07am
+12/6 1:21pm
+
+- added test scenes from text book
+- cmd line argument to select scene to render 
+- TODO: benchmarking script! (add nanobenchmark?)
+
+12/2
+
+- added timing code and openmp for parallelizing rendering
+
+11/29 11:07am
 
 - finished section 12
 - positionable camera

@@ -5,6 +5,7 @@
 #include "tracer.h"
 #include <cstdlib>
 #include <iostream>
+#include <nanobench.h>
 
 void scene_1(hittable_list &world, camera &camera)
 {

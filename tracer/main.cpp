@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <nanobench.h>
+#include <sstream>
 
 void scene_1(hittable_list &world, camera &camera)
 {
@@ -84,22 +85,22 @@ void scene_3(hittable_list &world, camera &camera)
 
 int main(int argc, char *argv[])
 {
-  hittable_list world;
+  // select test scene
+  int i_scene = 0;
+  if (argc > 1) {
+    i_scene = atoi(argv[1]);
+  }
+
   camera camera;
+  hittable_list world;
   camera.width_px = 400;
   camera.aa_samples_per_pixels = 100;
-  camera.max_bounces = 20;
+  camera.max_bounces = 10;
   camera.lookfrom = vec3(13, 2, 3);
   camera.lookat = vec3(0, 0, 0);
   camera.defocus_angle = 0.6;
   camera.focus_dist = 10;
   camera.v_fov = 20;
-
-  // select test scene
-  int i_scene = 0;
-  if (argc == 2) {
-    i_scene = atoi(argv[1]);
-  }
 
   switch (i_scene) {
   case 0:
@@ -113,7 +114,30 @@ int main(int argc, char *argv[])
     break;
   }
 
-  // render!
+  camera.init();
+  camera.print_settings(std::clog);
   std::clog << "Rendering scene " << i_scene << "...\n" << std::flush;
+
+#define MODE_BENCHMARK
+#ifdef MODE_BENCHMARK
+  std::clog << "\n" << std::flush;
+
+  int epochs = 5;
+  if (argc > 2) {
+    epochs = atoi(argv[2]);
+  }
+
+  std::stringstream bout;
+  ankerl::nanobench::Bench()
+      .output(nullptr)
+      // .context("scene", std::to_string(i_scene))
+      // .context("epochs", std::to_string(epochs))
+      .epochs(epochs)
+      .run("render!", [&] { camera.render(world); })
+      .render(ankerl::nanobench::templates::json(), bout);
+
+  std::clog << "[nanobench] " << bout.str() << "\n";
+#else
   camera.render(world);
+#endif
 }

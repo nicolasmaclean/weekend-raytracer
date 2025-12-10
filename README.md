@@ -36,6 +36,12 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+12/9 6:48pm
+
+- added benchmark config to cmake (compiler define for code to conditionally compile)
+- started benchmark.py to collect benchmark runs with different settings and analyze data
+- TODO: benchmark needs to parse the output and run it with the different setting combinations
+
 12/6 1:21pm
 
 - added test scenes from text book

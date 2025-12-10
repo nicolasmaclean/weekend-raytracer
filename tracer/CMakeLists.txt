@@ -1,10 +1,11 @@
 add_executable(tracer main.cpp)
-#target_compile_options(tracer
-#    PRIVATE
-#        $<$<CONFIG:Debug>:-O2>
-#        $<$<CONFIG:Debug>:-g>
-#        $<$<CONFIG:Debug>:-Wall>
-#)
+target_compile_options(tracer
+   PRIVATE
+       $<$<CONFIG:Debug>:-O2>
+       $<$<CONFIG:Debug>:-g>
+       $<$<CONFIG:Debug>:-Wall>
+       $<$<CONFIG:Benchmark>:-DMODE_BENCHMARK>
+)
 
 # include nanobench
 target_link_libraries(${PROJECT_NAME} PRIVATE nanobench)

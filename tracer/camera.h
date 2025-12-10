@@ -6,6 +6,7 @@
 #include "vec3.h"
 #include <chrono>
 #include <cmath>
+#include <ostream>
 
 #define MULTI_THREAD
 #ifdef MULTI_THREAD
@@ -30,7 +31,6 @@ public:
 
   void render(const hittable &world)
   {
-    init();
     unique_ptr<vec3[]> pixel_colors(new vec3[width_px * height_px]);
 
     auto start = high_resolution_clock::now();
@@ -74,16 +74,19 @@ public:
     }
   }
 
-private:
-  int height_px;
-  point3 center;
-  point3 viewport_origin;
-  vec3 viewport_du;
-  vec3 viewport_dv;
-  double aa_sample_scale;
-  vec3 u, v, w;
-  vec3 defocus_u;
-  vec3 defocus_v;
+  void print_settings(std::ostream &out)
+  {
+    out << "\nCamera settings\n"
+        << "===============\n"
+        << "Output size: (" << width_px << ", " << height_px << ")\n"
+        << "Viewport dx: (" << viewport_du.x() << ", " << viewport_dv.y() << ")\n"
+        << "Viewport worldspace origin: (" << viewport_origin << ")\n"
+        << "Camera position: (" << center << ")\n"
+        << "Max ray bounces: " << max_bounces << "\n"
+        << "Anti-aliasing samples/pixel: " << aa_samples_per_pixels << "\n"
+        << "\n"
+        << std::flush;
+  }
 
   void init()
   {
@@ -112,17 +115,18 @@ private:
     double defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
     defocus_u = u * defocus_radius;
     defocus_v = v * defocus_radius;
-
-    std::clog << "\nCamera settings\n"
-              << "===============\n"
-              << "Output size: (" << width_px << ", " << height_px << ")\n"
-              << "Viewport size: (" << vwidth << ", " << vheight << ")\n"
-              << "Viewport dx: (" << viewport_du.x() << ", " << viewport_dv.y() << ")\n"
-              << "Viewport worldspace origin: (" << viewport_origin << ")\n"
-              << "Camera position: (" << center << ")\n"
-              << "\n"
-              << std::flush;
   }
+
+private:
+  int height_px;
+  point3 center;
+  point3 viewport_origin;
+  vec3 viewport_du;
+  vec3 viewport_dv;
+  double aa_sample_scale;
+  vec3 u, v, w;
+  vec3 defocus_u;
+  vec3 defocus_v;
 
   color ray_color(const ray &r, int depth, const hittable &world)
   {

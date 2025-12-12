@@ -5,8 +5,6 @@
 #include "tracer.h"
 #include <cstdlib>
 #include <iostream>
-#include <nanobench.h>
-#include <sstream>
 
 void scene_1(hittable_list &world, camera &camera)
 {
@@ -39,6 +37,12 @@ void scene_1(hittable_list &world, camera &camera)
       }
     }
   }
+
+  camera.lookfrom = vec3(13, 2, 3);
+  camera.lookat = vec3(0, 0, 0);
+  camera.defocus_angle = 0.6;
+  camera.v_fov = 20;
+  camera.focus_dist = 10;
 }
 
 void scene_2(hittable_list &world, camera &camera)
@@ -60,6 +64,7 @@ void scene_2(hittable_list &world, camera &camera)
   camera.lookat = vec3(0, 0, -1);
   camera.v_fov = 90;
   camera.focus_dist = 1;
+  camera.defocus_angle = 0.6;
 }
 
 void scene_3(hittable_list &world, camera &camera)
@@ -79,28 +84,32 @@ void scene_3(hittable_list &world, camera &camera)
 
   camera.lookfrom = vec3(-2, 2, 1);
   camera.lookat = vec3(0, 0, -1);
-  // camera.v_fov = 90;
   camera.focus_dist = 4;
+  camera.defocus_angle = 0.6;
+  camera.v_fov = 20;
 }
 
 int main(int argc, char *argv[])
 {
-  // select test scene
+  // default cmd line args
   int i_scene = 0;
+  bool write_render_to_cout = true;
+
+  // select test scene
   if (argc > 1) {
     i_scene = atoi(argv[1]);
+  }
+
+  if (argc > 2) {
+    write_render_to_cout = false;
   }
 
   camera camera;
   hittable_list world;
   camera.width_px = 400;
-  camera.aa_samples_per_pixels = 100;
+  camera.aa_samples_per_pixels = 50;
   camera.max_bounces = 10;
-  camera.lookfrom = vec3(13, 2, 3);
-  camera.lookat = vec3(0, 0, 0);
-  camera.defocus_angle = 0.6;
-  camera.focus_dist = 10;
-  camera.v_fov = 20;
+  // TODO: camera.open_mp
 
   switch (i_scene) {
   case 0:
@@ -114,30 +123,11 @@ int main(int argc, char *argv[])
     break;
   }
 
-  camera.init();
-  camera.print_settings(std::clog);
-  std::clog << "Rendering scene " << i_scene << "...\n" << std::flush;
+  std::clog << "Rendering scene " << i_scene << "..." << std::flush;
+  auto renderDuration = camera.render(world, write_render_to_cout);
 
-#define MODE_BENCHMARK
-#ifdef MODE_BENCHMARK
-  std::clog << "\n" << std::flush;
-
-  int epochs = 5;
-  if (argc > 2) {
-    epochs = atoi(argv[2]);
-  }
-
-  std::stringstream bout;
-  ankerl::nanobench::Bench()
-      .output(nullptr)
-      // .context("scene", std::to_string(i_scene))
-      // .context("epochs", std::to_string(epochs))
-      .epochs(epochs)
-      .run("render!", [&] { camera.render(world); })
-      .render(ankerl::nanobench::templates::json(), bout);
-
-  std::clog << "[nanobench] " << bout.str() << "\n";
-#else
-  camera.render(world);
-#endif
+  auto per_pixel = renderDuration / (double(camera.height_px) * camera.width_px);
+  std::clog << "\rRendered scene " << i_scene << " in " << renderDuration / double(1000) << "s ("
+            << per_pixel << "ms/px)                       \n"
+            << std::flush;
 }

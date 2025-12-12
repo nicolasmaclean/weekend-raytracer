@@ -36,6 +36,12 @@ If mason lsp can't see the c++ standard libraries, [Change mason-lsp to use clan
 
 ## Progress Notes
 
+12/11 9pm
+
+- remove nanobench and benchmark config :skull:
+- just using perf and release config from ipynb to generate benchmark data
+- TODO: separate scene config, from render settings, from program args. maybe do config files for scene/render settings so ipynb can just swap them out
+
 12/9 6:48pm
 
 - added benchmark config to cmake (compiler define for code to conditionally compile)

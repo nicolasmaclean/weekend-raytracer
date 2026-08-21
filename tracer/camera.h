@@ -1,5 +1,6 @@
 #pragma once
 
+#include "framebuffer.h"
 #include "hittable.h"
 #include "material.h"
 #include "tracer.h"
@@ -27,12 +28,8 @@ public:
   double focus_dist = 10;
   double defocus_angle = 0;
 
-  double render(const hittable &world)
+  double render(const hittable &world, framebuffer &buffer)
   {
-    init();
-
-    unique_ptr<vec3[]> pixel_colors(new vec3[width_px * height_px]);
-
     auto start = high_resolution_clock::now();
 
     // render scene to buffer
@@ -45,27 +42,16 @@ public:
         }
 
         int i = v * width_px + u;
-        pixel_colors[i] = aa_sample_scale * pixel_color;
+        buffer.pixels[i] = aa_sample_scale * pixel_color;
       }
     }
 
     auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
-
-    // save pixels colors to file
-    std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
-    for (int i = 0; i < width_px * height_px; i++) {
-      write_color(std::cout, pixel_colors[i]);
-    }
-
     return elapsed;
   }
 
-  double render_openmp(const hittable &world)
+  double render_openmp(const hittable &world, framebuffer &buffer)
   {
-    init();
-
-    unique_ptr<vec3[]> pixel_colors(new vec3[width_px * height_px]);
-
     auto start = high_resolution_clock::now();
 
     // int max_threads = std::thread::hardware_concurrency(); // typical default
@@ -83,18 +69,11 @@ public:
         }
 
         int i = v * width_px + u;
-        pixel_colors[i] = aa_sample_scale * pixel_color;
+        buffer.pixels[i] = aa_sample_scale * pixel_color;
       }
     }
 
     auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
-
-    // save pixels colors to file
-    std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
-    for (int i = 0; i < width_px * height_px; i++) {
-      write_color(std::cout, pixel_colors[i]);
-    }
-
     return elapsed;
   }
 
@@ -111,16 +90,6 @@ public:
         << "\n"
         << std::flush;
   }
-
-private:
-  point3 center;
-  point3 viewport_origin;
-  vec3 viewport_du;
-  vec3 viewport_dv;
-  double aa_sample_scale;
-  vec3 u, v, w;
-  vec3 defocus_u;
-  vec3 defocus_v;
 
   void init()
   {
@@ -150,6 +119,16 @@ private:
     defocus_u = u * defocus_radius;
     defocus_v = v * defocus_radius;
   }
+
+private:
+  point3 center;
+  point3 viewport_origin;
+  vec3 viewport_du;
+  vec3 viewport_dv;
+  double aa_sample_scale;
+  vec3 u, v, w;
+  vec3 defocus_u;
+  vec3 defocus_v;
 
   color ray_color(const ray &r, int depth, const hittable &world)
   {

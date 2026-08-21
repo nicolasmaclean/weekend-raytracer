@@ -8,10 +8,7 @@
 #include <cmath>
 #include <ostream>
 
-// #define MULTI_THREAD
-#ifdef MULTI_THREAD
 #include <omp.h>
-#endif
 
 using namespace std::chrono;
 
@@ -30,7 +27,7 @@ public:
   double focus_dist = 10;
   double defocus_angle = 0;
 
-  double render(const hittable &world, bool write_to_output)
+  double render(const hittable &world)
   {
     init();
 
@@ -38,13 +35,6 @@ public:
 
     auto start = high_resolution_clock::now();
 
-#ifdef MULTI_THREAD
-    // int max_threads = std::thread::hardware_concurrency(); // typical default
-    int max_threads = 12;
-    omp_set_num_threads(max_threads);
-
-#pragma omp parallel for collapse(2) schedule(dynamic)
-#endif
     // render scene to buffer
     for (int v = 0; v < height_px; v++) {
       for (int u = 0; u < width_px; u++) {
@@ -57,21 +47,52 @@ public:
         int i = v * width_px + u;
         pixel_colors[i] = aa_sample_scale * pixel_color;
       }
-      // auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start);
-      // auto average_per_row = elapsed.count() / (v + 1);
-      // std::clog << "\rScanlines remaining: " << height_px - v
-      //           << " (est time: " << average_per_row * (height_px - v + 1) / 1000 << "s) "
-      //           << std::flush;
     }
 
     auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
 
     // save pixels colors to file
-    if (write_to_output) {
-      std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
-      for (int i = 0; i < width_px * height_px; i++) {
-        write_color(std::cout, pixel_colors[i]);
+    std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
+    for (int i = 0; i < width_px * height_px; i++) {
+      write_color(std::cout, pixel_colors[i]);
+    }
+
+    return elapsed;
+  }
+
+  double render_openmp(const hittable &world)
+  {
+    init();
+
+    unique_ptr<vec3[]> pixel_colors(new vec3[width_px * height_px]);
+
+    auto start = high_resolution_clock::now();
+
+    // int max_threads = std::thread::hardware_concurrency(); // typical default
+    int max_threads = 12;
+    omp_set_num_threads(max_threads);
+
+// render scene to buffer
+#pragma omp parallel for collapse(2) schedule(dynamic)
+    for (int v = 0; v < height_px; v++) {
+      for (int u = 0; u < width_px; u++) {
+        color pixel_color(0, 0, 0);
+        for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
+          ray r = get_ray(u, v);
+          pixel_color += ray_color(r, max_bounces, world);
+        }
+
+        int i = v * width_px + u;
+        pixel_colors[i] = aa_sample_scale * pixel_color;
       }
+    }
+
+    auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+
+    // save pixels colors to file
+    std::cout << "P3\n" << width_px << " " << height_px << "\n255\n";
+    for (int i = 0; i < width_px * height_px; i++) {
+      write_color(std::cout, pixel_colors[i]);
     }
 
     return elapsed;

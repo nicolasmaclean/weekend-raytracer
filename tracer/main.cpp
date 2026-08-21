@@ -93,21 +93,16 @@ int main(int argc, char *argv[])
 {
   // default cmd line args
   int i_scene = 0;
-  bool write_render_to_cout = true;
 
   // select test scene
   if (argc > 1) {
     i_scene = atoi(argv[1]);
   }
 
-  if (argc > 2) {
-    write_render_to_cout = false;
-  }
-
   camera camera;
   hittable_list world;
   camera.width_px = 400;
-  camera.aa_samples_per_pixels = 50;
+  camera.aa_samples_per_pixels = 20;
   camera.max_bounces = 10;
   // TODO: camera.open_mp
 
@@ -123,8 +118,13 @@ int main(int argc, char *argv[])
     break;
   }
 
-  std::clog << "Rendering scene " << i_scene << "..." << std::flush;
-  auto renderDuration = camera.render(world, write_render_to_cout);
+  std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
+  double renderDuration;
+  if (argc > 2 && atoi(argv[2]) > 0) {
+    renderDuration = camera.render(world);
+  } else {
+    renderDuration = camera.render_openmp(world);
+  }
 
   auto per_pixel = renderDuration / (double(camera.height_px) * camera.width_px);
   std::clog << "\rRendered scene " << i_scene << " in " << renderDuration / double(1000) << "s ("

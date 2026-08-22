@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 project(tracer)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CONFIGURATION_TYPES
     Debug
     Release
@@ -13,3 +15,4 @@ set(CMAKE_C_FLAGS_BENCHMARK   "${CMAKE_C_FLAGS_RELEASE}   -O3 -DNDEBUG -DBENCHMA
 
 add_subdirectory(vendor)
 add_subdirectory(tracer)
+add_subdirectory(viewer)

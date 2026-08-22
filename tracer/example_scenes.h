@@ -12,6 +12,8 @@
 
 void scene_1(hittable_list &world, camera &camera)
 {
+  rng gen(0xC0FFEE);
+
   // Setup up the scene
   auto m_ground = make_shared<lambert>(color(0.6, 0.6, 0.6));
   auto m_glass = make_shared<glass>(color(1, 1, 1), 1.5);
@@ -26,14 +28,16 @@ void scene_1(hittable_list &world, camera &camera)
 
   for (int a = -11; a < 11; a++) {
     for (int b = -11; b < 11; b++) {
-      point3 center = vec3(a + 0.9 * random_double(), .2, b + 0.9 * random_double());
+      point3 center = vec3(a + 0.9 * gen.uniform(), .2, b + 0.9 * gen.uniform());
       if ((center - vec3(4, .2, 0)).length() > .9) {
         shared_ptr<material> mat;
-        double choose_mat = random_double();
+        double choose_mat = gen.uniform();
         if (choose_mat < 0.8) {
-          mat = make_shared<lambert>(color::random() * color::random());
+          mat = make_shared<lambert>(color::random(gen) * color::random(gen));
         } else if (choose_mat < 0.95) {
-          mat = make_shared<metal>(color::random(0.5, 1), random_double(0, 0.5));
+          color albedo = color::random(gen, 0.5, 1);
+          double fuzz = gen.uniform(0, 0.5);
+          mat = make_shared<metal>(albedo, fuzz);
         } else {
           mat = make_shared<glass>(color(1, 1, 1), 1.5);
         }
@@ -51,7 +55,6 @@ void scene_1(hittable_list &world, camera &camera)
 
 void scene_2(hittable_list &world, camera &camera)
 {
-
   auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
   auto m_left = make_shared<glass>(color(1, 1, 1), 1.5);
   auto m_bubble = make_shared<glass>(color(1, 1, 1), 1 / 1.5);
@@ -73,7 +76,6 @@ void scene_2(hittable_list &world, camera &camera)
 
 void scene_3(hittable_list &world, camera &camera)
 {
-
   auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
   auto m_left = make_shared<glass>(color(1, 1, 1), 1.5);
   auto m_bubble = make_shared<glass>(color(1, 1, 1), 1 / 1.5);

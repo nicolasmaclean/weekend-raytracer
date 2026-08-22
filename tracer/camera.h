@@ -3,6 +3,7 @@
 #include "framebuffer.h"
 #include "hittable.h"
 #include "material.h"
+#include "rng.h"
 #include "tracer.h"
 #include "vec3.h"
 #include <chrono>
@@ -37,8 +38,9 @@ public:
       for (int u = 0; u < width_px; u++) {
         color pixel_color(0, 0, 0);
         for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
-          ray r = get_ray(u, v);
-          pixel_color += ray_color(r, max_bounces, world);
+          rng generator = rng(sample_seed(v*width_px+u, sample, 0));
+          ray r = get_ray(generator, u, v);
+          pixel_color += ray_color(generator, r, max_bounces, world);
         }
 
         int i = v * width_px + u;
@@ -64,8 +66,9 @@ public:
       for (int u = 0; u < width_px; u++) {
         color pixel_color(0, 0, 0);
         for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
-          ray r = get_ray(u, v);
-          pixel_color += ray_color(r, max_bounces, world);
+          rng generator = rng(sample_seed(v*width_px+u, sample, 0));
+          ray r = get_ray(generator, u, v);
+          pixel_color += ray_color(generator, r, max_bounces, world);
         }
 
         int i = v * width_px + u;
@@ -130,7 +133,7 @@ private:
   vec3 defocus_u;
   vec3 defocus_v;
 
-  color ray_color(const ray &r, int depth, const hittable &world)
+  color ray_color(rng &generator, const ray &r, int depth, const hittable &world)
   {
     hit_info hit;
 
@@ -141,8 +144,8 @@ private:
     if (world.hit(r, interval(0.001, infinity), hit)) {
       color attenuation;
       ray bounced;
-      if (hit.mat->scatter(r, hit, attenuation, bounced)) {
-        return attenuation * ray_color(bounced, depth - 1, world);
+      if (hit.mat->scatter(generator, r, hit, attenuation, bounced)) {
+        return attenuation * ray_color(generator, bounced, depth - 1, world);
       }
       return color(0, 0, 0);
     }
@@ -152,19 +155,19 @@ private:
     return (1.0 - a) * color(1, 1, 1) + a * color(0.5, 0.7, 1);
   }
 
-  ray get_ray(int u, int v)
+  ray get_ray(rng &generator, int u, int v)
   {
-    vec3 offset = sample_square();
+    vec3 offset = sample_square(generator);
     vec3 pixel_sample =
         viewport_origin + ((u + offset.x()) * viewport_du) + ((v + offset.y()) * viewport_dv);
-    vec3 origin = defocus_angle <= 0 ? center : defocus_disk_sample();
+    vec3 origin = defocus_angle <= 0 ? center : defocus_disk_sample(generator);
     return ray(origin, pixel_sample - origin);
   }
 
-  vec3 defocus_disk_sample()
+  vec3 defocus_disk_sample(rng &generator)
   {
-    vec3 sample = random_unit_disk();
+    vec3 sample = random_unit_disk(generator);
     return center + (sample.x() * defocus_u) + (sample.y() * defocus_v);
   }
-  vec3 sample_square() { return vec3(random_double(-0.5, 0.5), random_double(-0.5, 0.5), 0); }
+  vec3 sample_square(rng &generator) { return vec3(generator.uniform(-0.5, 0.5), generator.uniform(-0.5, 0.5), 0); }
 };

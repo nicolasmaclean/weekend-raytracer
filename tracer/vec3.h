@@ -50,11 +50,11 @@ public:
     return std::fabs(x()) < epsilon && std::fabs(y()) < epsilon && std::fabs(z()) < epsilon;
   }
 
-  static vec3 random() { return vec3(random_double(), random_double(), random_double()); }
+  static vec3 random(rng &generator) { return vec3(generator.uniform(), generator.uniform(), generator.uniform()); }
 
-  static vec3 random(double min, double max)
+  static vec3 random(rng &generator, double min, double max)
   {
-    return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
+    return vec3(generator.uniform(min, max), generator.uniform(min, max), generator.uniform(min, max));
   }
 };
 
@@ -99,10 +99,10 @@ inline vec3 cross(const vec3 &a, const vec3 &b)
 
 inline vec3 unit_vector(const vec3 &v) { return v / v.length(); }
 
-inline vec3 random_unit_vec3()
+inline vec3 random_unit_vec3(rng &generator)
 {
   while (true) {
-    vec3 p = vec3::random(-1, 1);
+    vec3 p = vec3::random(generator, -1, 1);
     double len_sqr = p.length_sqr();
     if (1e-160 < len_sqr && len_sqr <= 1) {
       return p / sqrt(len_sqr);
@@ -110,9 +110,9 @@ inline vec3 random_unit_vec3()
   }
 }
 
-inline vec3 random_in_unit_sphere(const vec3 &normal)
+inline vec3 random_in_unit_sphere(rng &generator, const vec3 &normal)
 {
-  vec3 p = random_unit_vec3();
+  vec3 p = random_unit_vec3(generator);
   if (dot(p, normal) > 0) {
     return p;
   } else {
@@ -120,10 +120,10 @@ inline vec3 random_in_unit_sphere(const vec3 &normal)
   }
 }
 
-inline vec3 random_unit_disk()
+inline vec3 random_unit_disk(rng &generator)
 {
   while (true) {
-    vec3 v = vec3(random_double(-1, 1), random_double(-1, 1), 0);
+    vec3 v = vec3(generator.uniform(-1, 1), generator.uniform(-1, 1), 0);
     if (v.length_sqr() < 1) {
       return v;
     }

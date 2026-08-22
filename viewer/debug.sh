@@ -11,5 +11,5 @@ cmake --build ../build --config Debug
 echo ""
 echo "Running!"
 echo "==============="
-../build/tracer/Debug/tracer_cli $1 >image.ppm
-xdg-open image.ppm
+../build/viewer/Debug/viewer
+

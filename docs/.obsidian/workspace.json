@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "090bf4b477897911",
+        "id": "16d8260890fca2f3",
         "type": "tabs",
         "children": [
           {
-            "id": "8b82af5ce704565e",
+            "id": "d230bfbaf98042c0",
             "type": "leaf",
             "state": {
               "type": "kanban",
@@ -178,9 +178,9 @@
       "obsidian-kanban:Create new board": false
     }
   },
-  "active": "8b82af5ce704565e",
+  "active": "d230bfbaf98042c0",
   "lastOpenFiles": [
-    "Welcome.md",
-    "Roadmap.md"
+    "Roadmap.md",
+    "Welcome.md"
   ]
 }

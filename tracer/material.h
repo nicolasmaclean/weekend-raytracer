@@ -25,7 +25,7 @@ public:
   bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation, ray &r_out) const override
   {
     attenuation = albedo;
-    vec3 scatter_direction = info.p + random_unit_vec3(generator);
+    vec3 scatter_direction = info.p + random_unit_vec3(generator); // ai gave me unsolicited advice this should use info.normal instead but I think it's wrong? double check later
     if (scatter_direction.near_zero())
       scatter_direction = info.normal;
     r_out = ray(info.p, scatter_direction);

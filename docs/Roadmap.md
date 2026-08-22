@@ -15,7 +15,8 @@ kanban-plugin: board
 
 ## 0.2.0 - hydra prep
 
-- [ ] sdl viewer and output to pixel buffer
+- [x] output to pixel buffer
+- [ ] sdl viewer
 - [ ] progressive rendering
 - [ ] make sure rng is thread-safe
 - [ ] camera api refactor

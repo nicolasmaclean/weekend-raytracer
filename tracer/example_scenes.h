@@ -99,7 +99,6 @@ inline void load_scene(int i, hittable_list &world, camera &camera)
 {
   // prepare camera/scene
   camera.width_px = 400;
-  camera.aa_samples_per_pixels = 20;
   camera.max_bounces = 10;
 
   switch (i) {

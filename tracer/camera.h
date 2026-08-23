@@ -1,16 +1,19 @@
 #pragma once
 
+#include <chrono>
+#include <cmath>
+#include <ostream>
+#include <thread>
+
+#include <omp.h>
+
 #include "framebuffer.h"
 #include "hittable.h"
 #include "material.h"
 #include "rng.h"
 #include "tracer.h"
 #include "vec3.h"
-#include <chrono>
-#include <cmath>
-#include <ostream>
 
-#include <omp.h>
 
 using namespace std::chrono;
 
@@ -21,64 +24,24 @@ public:
   int height_px;
   double aspect_ratio = 16.0 / 9.0;
   double v_fov = 90;
-  int aa_samples_per_pixels = 50;
   int max_bounces = 20;
   point3 lookfrom = vec3(0, 0, 0);
   point3 lookat = vec3(0, 0, -1);
   vec3 vup = vec3(0, 1, 0);
   double focus_dist = 10;
   double defocus_angle = 0;
+  bool use_openmp = true;
 
-  double render(const hittable &world, framebuffer &buffer)
+  double render(const hittable &world, framebuffer &buffer, int samples)
   {
-    auto start = high_resolution_clock::now();
-
-    // render scene to buffer
-    for (int v = 0; v < height_px; v++) {
-      for (int u = 0; u < width_px; u++) {
-        color pixel_color(0, 0, 0);
-        for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
-          rng generator = rng(sample_seed(v*width_px+u, sample, 0));
-          ray r = get_ray(generator, u, v);
-          pixel_color += ray_color(generator, r, max_bounces, world);
-        }
-
-        int i = v * width_px + u;
-        buffer.pixels[i] = aa_sample_scale * pixel_color;
-      }
+    if (use_openmp)
+    {
+      return render_region_openmp(world, buffer, 0, width_px, 0, height_px, samples);
     }
-
-    auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
-    return elapsed;
+    
+    return render_region(world, buffer, 0, width_px, 0, height_px, samples);
   }
 
-  double render_openmp(const hittable &world, framebuffer &buffer)
-  {
-    auto start = high_resolution_clock::now();
-
-    // int max_threads = std::thread::hardware_concurrency(); // typical default
-    int max_threads = 12;
-    omp_set_num_threads(max_threads);
-
-// render scene to buffer
-#pragma omp parallel for collapse(2) schedule(dynamic)
-    for (int v = 0; v < height_px; v++) {
-      for (int u = 0; u < width_px; u++) {
-        color pixel_color(0, 0, 0);
-        for (int sample = 0; sample < aa_samples_per_pixels; sample++) {
-          rng generator = rng(sample_seed(v*width_px+u, sample, 0));
-          ray r = get_ray(generator, u, v);
-          pixel_color += ray_color(generator, r, max_bounces, world);
-        }
-
-        int i = v * width_px + u;
-        buffer.pixels[i] = aa_sample_scale * pixel_color;
-      }
-    }
-
-    auto elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
-    return elapsed;
-  }
 
   void print_settings(std::ostream &out)
   {
@@ -89,7 +52,6 @@ public:
         << "Viewport worldspace origin: (" << viewport_origin << ")\n"
         << "Camera position: (" << center << ")\n"
         << "Max ray bounces: " << max_bounces << "\n"
-        << "Anti-aliasing samples/pixel: " << aa_samples_per_pixels << "\n"
         << "\n"
         << std::flush;
   }
@@ -97,7 +59,6 @@ public:
   void init()
   {
     center = point3(0, 0, 0);
-    aa_sample_scale = 1.0 / aa_samples_per_pixels;
     center = lookfrom;
 
     w = unit_vector(lookfrom - lookat);
@@ -128,11 +89,56 @@ private:
   point3 viewport_origin;
   vec3 viewport_du;
   vec3 viewport_dv;
-  double aa_sample_scale;
   vec3 u, v, w;
   vec3 defocus_u;
   vec3 defocus_v;
 
+  double render_region(const hittable &world, framebuffer &buffer, int x0, int x1, int y0, int y1, int samples)
+  {
+    auto start = high_resolution_clock::now();
+
+    // render scene to buffer
+    for (int v = y0; v < y1; v++) {
+      for (int u = x0; u < x1; u++) {
+        int i = v * width_px + u;
+        int sample_base = buffer.samples[i];
+        for (int sample = 0; sample < samples; sample++) {
+          rng generator = rng(sample_seed(v*width_px+u, sample_base+sample, 0));
+          ray r = get_ray(generator, u, v);
+          buffer.pixels[i] += ray_color(generator, r, max_bounces, world);
+        }
+        buffer.samples[i] += samples+1;
+      }
+    }
+
+    using ms_d = duration<double, std::milli>;
+    return ms_d(high_resolution_clock::now() - start).count();
+  }
+
+  double render_region_openmp(const hittable &world, framebuffer &buffer, int x0, int x1, int y0, int y1, int samples)
+  {
+    auto start = high_resolution_clock::now();
+   
+    int max_threads = std::thread::hardware_concurrency(); // typical default
+    omp_set_num_threads(max_threads);
+
+    // render scene to buffer
+#pragma omp parallel for collapse(2) schedule(dynamic, 16)
+    for (int v = y0; v < y1; v++) {
+      for (int u = x0; u < x1; u++) {
+        int i = v * width_px + u;
+        for (int sample = 0; sample < samples; sample++) {
+          rng generator = rng(sample_seed(v*width_px+u, buffer.samples[i]++, 0));
+          ray r = get_ray(generator, u, v);
+          buffer.pixels[i] += ray_color(generator, r, max_bounces, world);
+        }
+      }
+    }
+    
+    using ms_d = duration<double, std::milli>;
+    return ms_d(high_resolution_clock::now() - start).count();
+  }
+  
   color ray_color(rng &generator, const ray &r, int depth, const hittable &world)
   {
     hit_info hit;

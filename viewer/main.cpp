@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <iostream>
 #include <cstdlib>
+#include <algorithm>
 
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
@@ -10,7 +11,7 @@
 #include "example_scenes.h"
 
 
-void render_to_buffer(int i_scene, framebuffer &buffer)
+double render_to_buffer(int i_scene, framebuffer &buffer, int samples)
 {
   // configure scene/camera
   camera camera;
@@ -22,14 +23,15 @@ void render_to_buffer(int i_scene, framebuffer &buffer)
 
   // render!
   std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
-  double renderDuration;
-  renderDuration = camera.render_openmp(world, buffer);
+  double renderDuration = camera.render(world, buffer, samples);
   
   // output finish message
   auto per_pixel = renderDuration / (double(camera.height_px) * camera.width_px);
-  std::clog << "\rRendered scene " << i_scene << " in " << renderDuration / double(1000) << "s ("
+  std::clog << "\rRendered scene " << i_scene << " (" << samples << " samples) in " << renderDuration / double(1000) << "s ("
             << per_pixel << "ms/px)                       \n"
             << std::flush;
+
+  return renderDuration;
 }
 
 bool blit_buffer_to_texture(SDL_Texture *texture, const framebuffer &buffer)
@@ -45,12 +47,12 @@ bool blit_buffer_to_texture(SDL_Texture *texture, const framebuffer &buffer)
     // pitch is BYTES per row and may exceed width*4 (alignment padding),
     // so step in bytes and only then reinterpret
     uint32_t *row = reinterpret_cast<uint32_t *>(static_cast<uint8_t *>(raw) + y * pitch);
-    const color *src = &buffer.pixels[y * buffer.width];
+    const int base = y * buffer.width;
 
     // convert color to pixel directly into the render texture!
     for (int x = 0; x < buffer.width; x++) {
       int r, g, b;
-      color_to_rgb8(src[x], r, g, b);
+      color_to_rgb8(buffer.get_pixel(base + x), r, g, b);
       row[x] = (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
     }
   }
@@ -77,13 +79,17 @@ int main()
   // reuse frame buffer and render texture 
   framebuffer buffer;
   SDL_Texture *texture = nullptr; 
-  bool rendered = false;
 
   // clear screen to gray color
   std::clog << "Opening window..." << std::endl;
   SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);  // r, g, b, a
   SDL_RenderClear(renderer);
   SDL_RenderPresent(renderer);
+
+  const double budget_ms_per_update = 16.0;
+  double ms_per_sample = 0;
+  int max_samples = 1000;
+  int samples_done = 0;
 
   bool running = true;
   while (running)
@@ -99,9 +105,26 @@ int main()
     }
 
     // render and copy to render texture
-    if (!rendered)
+    if (samples_done < max_samples)
     {
-      render_to_buffer(0, buffer);
+      int samples_to_do = 1;
+      if (ms_per_sample > 0.0)
+      {
+        samples_to_do = std::clamp(int(budget_ms_per_update / ms_per_sample), 1, 64); 
+      }
+      samples_to_do = std::min(samples_to_do, max_samples - samples_done); 
+      
+      double ms = render_to_buffer(0, buffer, samples_to_do);
+      samples_done += samples_to_do;
+
+      if (ms > 0)
+      {
+        double measured = ms / samples_to_do;
+        ms_per_sample = (ms_per_sample == 0)
+          ? measured
+          : 0.7*ms_per_sample + 0.3*measured; // maintain value as an exponential moving average
+      }
+
       if (texture == nullptr || texture->h != buffer.height || texture->w != buffer.width)
       {
         if (texture != nullptr)
@@ -125,8 +148,11 @@ int main()
 
       // config render texture
       SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-    
-      rendered = true;
+
+      if (samples_done >= max_samples)
+      {
+        std::clog << "Finished rendering " << samples_done << " samples." << std::endl;
+      }
     }
 
     // upload render texture

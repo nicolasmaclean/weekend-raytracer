@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
   camera camera;
   hittable_list world;
   load_scene(i_scene, world, camera);
+  camera.use_openmp = !(argc > 2 && atoi(argv[2]) > 0);
 
   // prepare frame buffer
   framebuffer buffer;
@@ -26,17 +27,12 @@ int main(int argc, char *argv[])
 
   // render!
   std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
-  double renderDuration;
-  if (argc > 2 && atoi(argv[2]) > 0) {
-    renderDuration = camera.render(world, buffer);
-  } else {
-    renderDuration = camera.render_openmp(world, buffer);
-  }
+  double renderDuration = camera.render(world, buffer, 50);
 
   // save buffer to image file
   std::cout << "P3\n" << camera.width_px << " " << camera.height_px << "\n255\n";
-  for (int i = 0; i < camera.width_px * camera.height_px; i++) {
-    write_color(std::cout, buffer.pixels[i]);
+  for (int i = 0; i < buffer.pixel_count; i++) {
+    write_color(std::cout, buffer.get_pixel(i));
   }
 
   // output finish message

@@ -8,5 +8,5 @@ cmake -S .. -G "Ninja Multi-Config" -B ../build
 cmake --build ../build --config Release
 
 echo ""
-../build/tracer/Release/tracer $1 >image.ppm
+../build/tracer/Release/tracer_cli $1 >image.ppm
 xdg-open image.ppm

@@ -16,14 +16,13 @@ kanban-plugin: board
 ## 0.2.0 - hydra prep
 
 - [x] output to pixel buffer
-- [ ] sdl viewer
+- [x] sdl viewer and make tracer into a library
+- [x] thread-safe rng (rng generator is created/seeded for each pixel and sample)
 - [ ] progressive rendering
-- [ ] make sure rng is thread-safe
 - [ ] camera api refactor
-- [ ] scene graph with mutation
 - [ ] triangle mesh
+- [ ] scene graph with mutation
 - [ ] transform support
-- [ ] split viewer and library into separate builds
 
 
 ## 0.3.0 hyrda delegate

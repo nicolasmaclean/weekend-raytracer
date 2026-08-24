@@ -18,7 +18,7 @@ kanban-plugin: board
 - [x] output to pixel buffer
 - [x] sdl viewer and make tracer into a library
 - [x] thread-safe rng (rng generator is created/seeded for each pixel and sample)
-- [ ] progressive rendering
+- [x] progressive rendering
 - [ ] camera api refactor
 - [ ] triangle mesh
 - [ ] scene graph with mutation

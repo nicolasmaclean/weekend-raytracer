@@ -86,7 +86,7 @@ int main()
   SDL_RenderClear(renderer);
   SDL_RenderPresent(renderer);
 
-  const double budget_ms_per_update = 16.0;
+  const double budget_ms_per_update = 40;
   double ms_per_sample = 0;
   int max_samples = 1000;
   int samples_done = 0;
@@ -114,7 +114,7 @@ int main()
       }
       samples_to_do = std::min(samples_to_do, max_samples - samples_done); 
       
-      double ms = render_to_buffer(0, buffer, samples_to_do);
+      double ms = render_to_buffer(1, buffer, samples_to_do);
       samples_done += samples_to_do;
 
       if (ms > 0)

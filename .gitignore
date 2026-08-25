@@ -39,3 +39,5 @@
 /__pycache__
 /.cache/
 **/.cache/
+/docs/.trash
+/docs/.obsidian/workspace.json

@@ -19,32 +19,35 @@ kanban-plugin: board
 - [x] sdl viewer and make tracer into a library
 - [x] thread-safe rng (rng generator is created/seeded for each pixel and sample)
 - [x] progressive rendering
+- [x] switch OMP to TBB
 - [ ] camera api refactor
-- [ ] triangle mesh
 - [ ] scene graph with mutation
 - [ ] transform support
 
 
-## 0.3.0 hyrda delegate
+## 0.3.0 - hyrda delegate
 
 - [ ] hydra wrapper
-- [ ] usdviewer plugin:
-	- should be easier than blender so this will be good smoke test
+- [ ] usdviewer integration
+
+
+## 0.4.0 - more features!
+
 - [ ] blender plugin
+- [ ] triangle mesh
+- [ ] bfh space partition
 
 
 ## Wishlist
 
-- [ ] Optimization
-	- oct tree vs bfh space partition
-- [ ] hyrda delegate
 - [ ] profiling tools
+- [ ] texture mapping
 
 
 
 
 %% kanban:settings
 ```
-{"kanban-plugin":"board","list-collapse":[false,false,false,false]}
+{"kanban-plugin":"board","list-collapse":[false,false,false,false,false]}
 ```
 %%

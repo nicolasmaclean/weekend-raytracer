@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
   camera camera;
   hittable_list world;
   load_scene(i_scene, world, camera);
-  camera.use_openmp = !(argc > 2 && atoi(argv[2]) > 0);
+  camera.multithread = !(argc > 2 && atoi(argv[2]) > 0);
 
   // prepare frame buffer
   framebuffer buffer;

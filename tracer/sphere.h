@@ -36,7 +36,7 @@ public:
     info.t = root;
     info.p = r.at(info.t);
     info.normal = (info.p - center) / radius;
-    info.mat = mat;
+    info.mat = mat.get();
     vec3 outward_normal = (info.p - center) / radius;
     info.set_face_normal(r, outward_normal);
 

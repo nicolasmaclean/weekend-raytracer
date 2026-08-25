@@ -3,15 +3,15 @@
 #include <chrono>
 #include <cmath>
 #include <ostream>
-#include <thread>
 
-#include <omp.h>
+#include <tbb/blocked_range2d.h>
+#include <tbb/parallel_for.h>
 
 #include "framebuffer.h"
 #include "hittable.h"
-#include "material.h"
 #include "rng.h"
 #include "tracer.h"
+#include "material.h"
 #include "vec3.h"
 
 
@@ -30,13 +30,13 @@ public:
   vec3 vup = vec3(0, 1, 0);
   double focus_dist = 10;
   double defocus_angle = 0;
-  bool use_openmp = true;
+  bool multithread = true;
 
   double render(const hittable &world, framebuffer &buffer, int samples)
   {
-    if (use_openmp)
+    if (multithread)
     {
-      return render_region_openmp(world, buffer, 0, width_px, 0, height_px, samples);
+      return render_region_parallel(world, buffer, 0, width_px, 0, height_px, samples);
     }
     
     return render_region(world, buffer, 0, width_px, 0, height_px, samples);
@@ -115,25 +115,28 @@ private:
     return ms_d(high_resolution_clock::now() - start).count();
   }
 
-  double render_region_openmp(const hittable &world, framebuffer &buffer, int x0, int x1, int y0, int y1, int samples)
+  double render_region_parallel(const hittable &world, framebuffer &buffer, int x0, int x1, int y0, int y1, int samples)
   {
     auto start = high_resolution_clock::now();
    
-    int max_threads = std::thread::hardware_concurrency(); // typical default
-    omp_set_num_threads(max_threads);
-
     // render scene to buffer
-#pragma omp parallel for collapse(2) schedule(dynamic, 16)
-    for (int v = y0; v < y1; v++) {
-      for (int u = x0; u < x1; u++) {
-        int i = v * width_px + u;
-        for (int sample = 0; sample < samples; sample++) {
-          rng generator = rng(sample_seed(v*width_px+u, buffer.samples[i]++, 0));
-          ray r = get_ray(generator, u, v);
-          buffer.pixels[i] += ray_color(generator, r, max_bounces, world);
+    tbb::parallel_for(
+      tbb::blocked_range2d<int>(y0, y1, 16, x0, x1, 16),
+      [&](const tbb::blocked_range2d<int> &tile) {
+        for (int v = tile.rows().begin(); v < tile.rows().end(); v++) {
+          for (int u = tile.cols().begin(); u < tile.cols().end(); u++) {
+            int i = v * width_px + u;
+            int sample_base = buffer.samples[i];
+            for (int sample = 0; sample < samples; sample++) {
+              rng generator = rng(sample_seed(v*width_px+u, sample_base + sample, 0));
+              ray r = get_ray(generator, u, v);
+              buffer.pixels[i] += ray_color(generator, r, max_bounces, world);
+            }
+            buffer.samples[i] += samples;
+          }
         }
       }
-    }
+    );
     
     using ms_d = duration<double, std::milli>;
     return ms_d(high_resolution_clock::now() - start).count();

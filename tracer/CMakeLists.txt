@@ -3,9 +3,8 @@ add_library(tracer INTERFACE)
 target_include_directories(tracer INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(tracer INTERFACE cxx_std_17)
 
-# include OpenMP
-find_package(OpenMP REQUIRED)
-target_link_libraries(tracer INTERFACE OpenMP::OpenMP_CXX)
+# include OneTBB
+target_link_libraries(tracer INTERFACE TBB::tbb)
 
 # compile cli (main.cpp create .ppm)
 add_executable(tracer_cli main.cpp)

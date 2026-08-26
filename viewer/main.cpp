@@ -8,31 +8,9 @@
 #include "camera.h"
 #include "framebuffer.h"
 #include "hittable_list.h"
+#include "renderer.h"
 #include "example_scenes.h"
 
-
-double render_to_buffer(int i_scene, framebuffer &buffer, int samples)
-{
-  // configure scene/camera
-  camera camera;
-  hittable_list world;
-  load_scene(i_scene, world, camera);
-
-  // prepare frame buffer
-  buffer.allocate(camera.width_px, camera.height_px);
-
-  // render!
-  std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
-  double renderDuration = camera.render(world, buffer, samples);
-  
-  // output finish message
-  auto per_pixel = renderDuration / (double(camera.height_px) * camera.width_px);
-  std::clog << "\rRendered scene " << i_scene << " (" << samples << " samples) in " << renderDuration / double(1000) << "s ("
-            << per_pixel << "ms/px)                       \n"
-            << std::flush;
-
-  return renderDuration;
-}
 
 bool blit_buffer_to_texture(SDL_Texture *texture, const framebuffer &buffer)
 {
@@ -76,9 +54,22 @@ int main()
     return 1;
   }
 
+  // prepare scene and renderer
+  hittable_list world;
+  camera_desc desc;
+  load_scene(1, world, desc);
+
+  const int render_width = 400, render_height = 225;
+  camera camera = desc.build(render_width, render_height);
+
+  struct renderer r;
+  r.max_bounces = 10;
+
   // reuse frame buffer and render texture 
+  SDL_Texture *texture = nullptr;
   framebuffer buffer;
-  SDL_Texture *texture = nullptr; 
+  buffer.allocate(render_width, render_height);
+
 
   // clear screen to gray color
   std::clog << "Opening window..." << std::endl;
@@ -114,7 +105,7 @@ int main()
       }
       samples_to_do = std::min(samples_to_do, max_samples - samples_done); 
       
-      double ms = render_to_buffer(1, buffer, samples_to_do);
+      double ms = r.render(camera, world, buffer, samples_to_do);
       samples_done += samples_to_do;
 
       if (ms > 0)

@@ -1,6 +1,7 @@
 #ifndef EXAMPLE_SCENES_H
 #define EXAMPLE_SCENES_H
 
+#include "camera_desc.h"
 #include "camera.h"
 #include "framebuffer.h"
 #include "hittable_list.h"
@@ -10,7 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 
-void scene_1(hittable_list &world, camera &camera)
+void scene_1(hittable_list &world, camera_desc &camera)
 {
   rng gen(0xC0FFEE);
 
@@ -53,7 +54,7 @@ void scene_1(hittable_list &world, camera &camera)
   camera.focus_dist = 10;
 }
 
-void scene_2(hittable_list &world, camera &camera)
+void scene_2(hittable_list &world, camera_desc &camera)
 {
   auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
   auto m_left = make_shared<glass>(color(1, 1, 1), 1.5);
@@ -74,7 +75,7 @@ void scene_2(hittable_list &world, camera &camera)
   camera.defocus_angle = 0.6;
 }
 
-void scene_3(hittable_list &world, camera &camera)
+void scene_3(hittable_list &world, camera_desc &camera)
 {
   auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
   auto m_left = make_shared<glass>(color(1, 1, 1), 1.5);
@@ -95,12 +96,29 @@ void scene_3(hittable_list &world, camera &camera)
   camera.v_fov = 20;
 }
 
-inline void load_scene(int i, hittable_list &world, camera &camera)
+void scene_4(hittable_list &world, camera_desc &desc)
 {
-  // prepare camera/scene
-  camera.width_px = 400;
-  camera.max_bounces = 10;
+  auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
+  auto m_left = make_shared<glass>(color(1, 1, 1), 1.5);
+  auto m_bubble = make_shared<glass>(color(1, 1, 1), 1 / 1.5);
+  auto m_center = make_shared<lambert>(color(0.1, 0.2, 0.5));
+  auto m_right = make_shared<metal>(color(0.7, 0.7, 0.7), 0.05);
 
+  world.add(make_shared<sphere>(vec3(0, -100.5, -1), 100, m_ground));
+  world.add(make_shared<sphere>(vec3(-1, 0, -1), 0.5, m_left));
+  world.add(make_shared<sphere>(vec3(-1, 0, -1), 0.4, m_bubble));
+  world.add(make_shared<sphere>(vec3(0, 0, -1), 0.5, m_center));
+  world.add(make_shared<sphere>(vec3(1, 0, -1), 0.5, m_right));
+  
+  desc.lookfrom = vec3(0, 0, 3);
+  desc.lookat = vec3(0, 0, -1);
+  desc.proj_type = projection::orthographic;
+  desc.ortho_half_height = 1.2;
+  desc.defocus_angle = 0;      // no DoF under ortho
+}
+
+inline void load_scene(int i, hittable_list &world, camera_desc &camera)
+{
   switch (i) {
   case 0:
     scene_1(world, camera);
@@ -111,8 +129,10 @@ inline void load_scene(int i, hittable_list &world, camera &camera)
   case 2:
     scene_3(world, camera);
     break;
+  case 3:
+    scene_4(world, camera);
+    break;
   }
-  camera.init();
 }
 
 #endif

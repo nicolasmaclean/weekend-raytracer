@@ -20,7 +20,7 @@ kanban-plugin: board
 - [x] thread-safe rng (rng generator is created/seeded for each pixel and sample)
 - [x] progressive rendering
 - [x] hdTiny stub delegate
-- [ ] camera api refactor
+- [x] camera api refactor
 	- matrix-driven rays
 	- ortho/perspective
 - [ ] render target refactor (prepare framebuffer to work with hydra)

@@ -9,7 +9,7 @@ kanban-plugin: board
 **Complete**
 - [x] ppm image rendering
 - [x] sphere primitive
-- [x] lamber, metal, and glass materials
+- [x] lambert, metal, and glass materials
 - [x] OMP multi-threading
 
 
@@ -19,29 +19,34 @@ kanban-plugin: board
 - [x] sdl viewer and make tracer into a library
 - [x] thread-safe rng (rng generator is created/seeded for each pixel and sample)
 - [x] progressive rendering
-- [x] switch OMP to TBB
+- [ ] hdTiny stub delegate
 - [ ] camera api refactor
-- [ ] scene graph with mutation
+	- matrix-driven rays
+	- ortho/perspective
+- [ ] render target refactor (prepare framebuffer to work with hydra)
+- [ ] interruptible tile-driven render loop
+	- [x] switch OMP to TBB
 - [ ] transform support
+- [ ] scene graph with mutation
+- [ ] triangle mesh
+- [ ] bvh with rebuild-on-mutation
 
 
-## 0.3.0 - hyrda delegate
+## 0.3.0 - hydra delegate
 
 - [ ] hydra wrapper
-- [ ] usdviewer integration
+- [ ] usdview integration
 
 
 ## 0.4.0 - more features!
 
 - [ ] blender plugin
-- [ ] triangle mesh
-- [ ] bfh space partition
+- [ ] texture mapping
 
 
 ## Wishlist
 
 - [ ] profiling tools
-- [ ] texture mapping
 
 
 

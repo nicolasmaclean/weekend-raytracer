@@ -1,11 +1,43 @@
 ## Ideas
 
-Progressive rendering? (and sdl)
-
 Wrapping my CPU ray tracer as a hydra delegate
 
 ---
 ## Draft
+
+My ray tracer doesn't decide how many samples to draw per frame. The clock does.
+
+I wrapped the tracer in an SDL window so I could watch a render converge instead of waiting on a file. The obvious version of that loop is: trace one sample per pixel, push it to the screen, repeat. It works, and it's wrong in both directions. On a cheap scene you spend most of your time uploading pixels instead of tracing them. On an expensive one, a single sample takes longer than a frame, and the window stops answering — you can't even close it.
+
+So the loop measures itself. It keeps an exponential moving average of what one sample per pixel actually costs, divides the frame budget (40ms) by that, and renders as many samples as it can per frame. Cheap scene, big batches, no wasted uploads. Expensive scene, one sample at a time, window still responsive. Same code either way, and there's no number to tune per scene.
+
+What makes that legal is the frame buffer. It holds summed color plus a per-pixel sample count and calculates the average on read, so "add eight more samples to the image you already have" is a valid operation at any moment.
+
+800x450, 1 to 1000 samples per pixel. About nine minutes of render, sped up.
+
+**Media:** `docs/socials/media/progressive/progressive_scene0.mp4` (8.3s, 800x450, sample counter + progress bar)
+
+---
+
+### Alternate hooks
+
+1. "My ray tracer doesn't decide how many samples to draw per frame. The clock does." *(current)*
+2. "The hard part of showing a render while it renders isn't the rendering. It's not freezing the window."
+3. "I gave my ray tracer a 40 millisecond budget and let it figure out the rest."
+
+### Alternate closers
+
+A. Unexpected payoff — bugs are visible at 1 spp — plus a one-line camera-API next step.
+B. Deflationary: "This isn't a renderer app, it's a test harness with a window on it. But it beats writing a .ppm and opening it in a picture viewer to find out I broke the camera again."
+C. Circular: "Honestly, the 40ms budget isn't my favorite part. My favorite part is that I don't open an image viewer anymore."
+D. Next step only: "Next up is the camera API, so I can move around the scene while it's still converging."
+E. *(current)* No closer — end on the spec line.
+
+---
+
+## Posted
+
+8/26/26
 
 I made my C++ raytracer 5x faster by changing one type.
 
@@ -37,10 +69,7 @@ One line fixed it: `shared_ptr<material>` became `const material *`. The hit rec
 | 64        | 903ms      | 176ms            | 5.13x |
 | 128       | 1123ms     | 288ms            | 3.89x |
 
-
 ---
-
-## Posted
 
 I’ve been putting together some benchmarking tools for my raytracer (I’ll share those soon), but I couldn’t resist trying out OpenMP in the meantime.  
   

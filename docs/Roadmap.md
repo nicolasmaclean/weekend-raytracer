@@ -19,7 +19,7 @@ kanban-plugin: board
 - [x] sdl viewer and make tracer into a library
 - [x] thread-safe rng (rng generator is created/seeded for each pixel and sample)
 - [x] progressive rendering
-- [ ] hdTiny stub delegate
+- [x] hdTiny stub delegate
 - [ ] camera api refactor
 	- matrix-driven rays
 	- ortho/perspective

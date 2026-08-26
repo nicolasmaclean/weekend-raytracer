@@ -41,3 +41,5 @@
 **/.cache/
 /docs/.trash
 /docs/.obsidian/workspace.json
+/build-hydra
+

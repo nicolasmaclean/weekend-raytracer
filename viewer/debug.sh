@@ -11,5 +11,5 @@ cmake --build ../build --config Debug
 echo ""
 echo "Running!"
 echo "==============="
-../build/viewer/Debug/viewer
+../build/viewer/Debug/viewer $1
 

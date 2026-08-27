@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "tracer.h"
+#include "vec3.h"
 
 // 4x4 double matrix. Row-major storage, ROW-VECTOR convention: v' = v * M, so
 // translation lives in m[3][0..2].
@@ -57,6 +58,64 @@ inline mat4 operator*(const mat4 &a, const mat4 &b)
   return r;
 }
 
+inline mat4 translate(const vec3 &t)
+{
+  mat4 r = mat4::identity();
+  r.m[3][0] = t[0];
+  r.m[3][1] = t[1];
+  r.m[3][2] = t[2];
+
+  return r;
+}
+
+inline mat4 scale(const vec3 &s)
+{
+  mat4 r = mat4::identity();
+  r.m[0][0] = s[0];
+  r.m[1][1] = s[1];
+  r.m[2][2] = s[2];
+
+  return r;
+}
+
+inline mat4 scale(double s)
+{
+  return scale(vec3(s, s, s));
+}
+
+inline mat4 rotate(const vec3 &axis, double degrees)
+{
+  const vec3 a = unit_vector(axis);
+  const double rad = degrees_to_radians(degrees);
+  const double c = std::cos(rad), s = std::sin(rad), t = 1 - c;
+
+  mat4 r = mat4::identity();
+  r.m[0][0] = t * a.x() * a.x() + c;
+  r.m[0][1] = t * a.x() * a.y() + s * a.z();
+  r.m[0][2] = t * a.x() * a.z() - s * a.y();
+  r.m[1][0] = t * a.x() * a.y() - s * a.z();
+  r.m[1][1] = t * a.y() * a.y() + c;
+  r.m[1][2] = t * a.y() * a.z() + s * a.x();
+  r.m[2][0] = t * a.x() * a.z() + s * a.y();
+  r.m[2][1] = t * a.y() * a.z() - s * a.x();
+  r.m[2][2] = t * a.z() * a.z() + c;
+  return r;
+}
+
+inline mat4 transpose(const mat4 &x)
+{
+  mat4 r {};
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      r.m[i][j] = x.m[j][i];
+    }
+  }
+
+  return r;
+}
+
 // Adjugate inverse via 2x2 sub-determinants. Layout-agnostic: this is a genuine
 // inverse of the matrix indexed as m[row][col]. Verified to 1e-10 over 2000
 // random matrices and to 1.8e-15 against GfMatrix4d::GetInverse (step 2, step 9).
@@ -104,8 +163,24 @@ inline mat4 inverse(const mat4 &x)
   return r;
 }
 
+inline bool is_finite(const mat4 &x)
+{
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      if (!std::isfinite(x.m[i][j]))
+      {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 // ---------------------------------------------------------------------------
-// Matrix builders. Only camera_desc.h and tests call these - the Hydra delegate
+// Matrix builders. Only camera_desc.h, example_scenes.h, and tests call these - the Hydra delegate
 // receives matrices already built and must never construct its own.
 // ---------------------------------------------------------------------------
 

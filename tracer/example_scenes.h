@@ -4,6 +4,7 @@
 
 #include "camera_desc.h"
 #include "camera.h"
+#include "instance.h"
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
@@ -115,6 +116,43 @@ void scene_4(hittable_list &world, camera_desc &desc)
   desc.defocus_angle = 0;      // no DoF under ortho
 }
 
+void scene_5(hittable_list &world, camera_desc &desc)
+{
+  auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
+  auto m_a = make_shared<lambert>(color(0.8, 0.3, 0.2));
+  auto m_b = make_shared<metal>(color(0.8, 0.8, 0.9), 0.02);
+  auto m_c = make_shared<glass>(color(1, 1, 1), 1.5);
+
+  auto unit = make_shared<sphere>(point3(0, 0, 0), 1.0, m_a);
+  auto unit_b = make_shared<sphere>(point3(0, 0, 0), 1.0, m_b);
+  auto unit_c = make_shared<sphere>(point3(0, 0, 0), 1.0, m_c);
+
+  world.add(make_shared<sphere>(vec3(0, -100.5, -1), 100, m_ground));
+  world.add(make_shared<instance>(unit,
+      scale(vec3(1.2, 0.35, 0.6)) * rotate(vec3(0, 0, 1), 30) * translate(vec3(-1.3, 0, -1.2))));
+  world.add(make_shared<instance>(unit_b,
+      scale(vec3(0.5, 1.4, 0.5)) * rotate(vec3(1, 0, 0), -25) * translate(vec3(0.3, 0.2, -1.6))));
+  world.add(make_shared<instance>(unit_c,
+      scale(vec3(0.6, 0.6, 0.6)) * translate(vec3(1.4, 0.1, -1.1))));
+  world.add(make_shared<instance>(unit,
+      scale(vec3(100, 0.01, 100)) * translate(vec3(0, -0.5, -1))));   // extreme scale
+  world.add(make_shared<instance>(unit,
+      scale(vec3(1, 0, 1)) * translate(vec3(0, 0.8, -1))));            // singular: must vanish
+
+  rng gen(7);
+  for (int i = 0; i < 200; i++) {
+    world.add(make_shared<instance>(unit_b,
+        scale(0.06) * rotate(vec3(0, 1, 0), gen.uniform(0, 360))
+        * translate(vec3(gen.uniform(-3, 3), gen.uniform(-0.4, 0.6), gen.uniform(-4, -0.6)))));
+  }
+
+  desc.lookfrom = vec3(0, 0.6, 1.2);
+  desc.lookat = vec3(0, 0, -1.2);
+  desc.v_fov = 60;
+  desc.focus_dist = 2.2;
+  desc.defocus_angle = 0;
+}
+
 inline void load_scene(int i, hittable_list &world, camera_desc &camera)
 {
   switch (i) {
@@ -129,6 +167,9 @@ inline void load_scene(int i, hittable_list &world, camera_desc &camera)
     break;
   case 3:
     scene_4(world, camera);
+    break;
+  case 4:
+    scene_5(world, camera);
     break;
   }
 }

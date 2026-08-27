@@ -24,9 +24,9 @@ kanban-plugin: board
 	- matrix-driven rays
 	- ortho/perspective
 - [x] render target refactor (prepare framebuffer to work with hydra)
-- [ ] interruptible tile-driven render loop
+- [x] interruptible tile-driven render loop
 	- [x] switch OMP to TBB
-- [ ] transform support
+- [x] transform support
 - [ ] scene graph with mutation
 - [ ] triangle mesh
 - [ ] bvh with rebuild-on-mutation

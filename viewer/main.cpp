@@ -55,7 +55,7 @@ bool blit_buffer_to_texture(SDL_Texture *texture, const render_buffer &buffer)
   return true;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
   if (!SDL_Init(SDL_INIT_VIDEO)) {     
     std::clog << "SDL_Init: " << SDL_GetError() << "\n";
@@ -71,9 +71,10 @@ int main()
   }
 
   // prepare scene 
+  int i_scene = argc > 1 ? atoi(argv[1]) : 1;
   hittable_list world;
   camera_desc desc;
-  load_scene(1, world, desc);
+  load_scene(i_scene, world, desc);
 
   const int render_width = 400, render_height = 225;
   camera cam = desc.build(render_width, render_height);
@@ -126,6 +127,7 @@ int main()
 
   // have render start immediately
   start_render();
+  std::clog << "Rendering scene " << i_scene << std::endl;
 
   int shown_samples = -1;
   bool running = true;

@@ -8,9 +8,20 @@
 #include "camera.h"
 #include "hittable_list.h"
 #include "render_buffer.h"
+#include "render_control.h"
 #include "renderer.h"
 #include "example_scenes.h"
+#include "schedulers.h"
 
+
+struct viewer_control : render_control
+{
+  std::atomic<bool> stop { false };
+  std::atomic<bool> pause { false };
+
+  bool is_stop_requested() const override { return stop.load(); }
+  bool is_pause_requested() const override { return pause.load(); }
+};
 
 bool blit_buffer_to_texture(SDL_Texture *texture, const render_buffer &buffer)
 {
@@ -52,117 +63,139 @@ int main()
   }
 
   SDL_Window *window = nullptr;
-  SDL_Renderer *renderer = nullptr;
-  if (!SDL_CreateWindowAndRenderer("viewer", 640, 360, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+  SDL_Renderer *sdl_renderer = nullptr;
+  if (!SDL_CreateWindowAndRenderer("viewer", 640, 360, SDL_WINDOW_RESIZABLE, &window, &sdl_renderer)) {
     std::clog << "SDL_CreateWindowAndRenderer: " << SDL_GetError() << "\n";
     SDL_Quit();
     return 1;
   }
 
-  // prepare scene and renderer
+  // prepare scene 
   hittable_list world;
   camera_desc desc;
   load_scene(1, world, desc);
 
   const int render_width = 400, render_height = 225;
-  camera camera = desc.build(render_width, render_height);
+  camera cam = desc.build(render_width, render_height);
 
+  // prepare renderer and buffer 
   struct renderer r;
-  r.max_bounces = 10;
+  r.max_bounces = 20;
+  r.samples_to_converge = 10000;
+  r.schedule = tbb_schedule;
 
-  // reuse frame buffer and render texture 
-  SDL_Texture *texture = nullptr;
   render_buffer buffer;
   aov_bindings aovs = {
     allocate_aov(buffer, aov::color, render_width, render_height)
   };
 
+  // setup start, pause, and stop controls
+  viewer_control control;
+  render_stats stats;
+  std::thread render_thread;
+
+  auto stop_render = [&]()
+  {
+    control.stop.store(true);
+    if (render_thread.joinable())
+    {
+      render_thread.join();
+    }
+  };
+
+  auto start_render = [&]()
+  {
+    stop_render();
+    buffer.clear(4, default_aov_descriptor(aov::color).clear_value);
+    mark_unconverged(aovs);
+    control.stop.store(false);
+    control.pause.store(false);
+    render_thread = std::thread([&]() { stats = r.render(cam, world, aovs, &control); });
+  };
+
+  // prepare render texture
+  SDL_Texture *texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, render_width, render_height);
+  SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+  SDL_SetRenderLogicalPresentation(sdl_renderer, render_width, render_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
   // clear screen to gray color
   std::clog << "Opening window..." << std::endl;
-  SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);  // r, g, b, a
-  SDL_RenderClear(renderer);
-  SDL_RenderPresent(renderer);
+  SDL_SetRenderDrawColor(sdl_renderer, 20, 20, 20, 255);  // r, g, b, a
+  SDL_RenderClear(sdl_renderer);
+  SDL_RenderPresent(sdl_renderer);
 
-  const double budget_ms_per_update = 40;
-  double ms_per_sample = 0;
-  int max_samples = 1000;
-  int samples_done = 0;
+  // have render start immediately
+  start_render();
 
+  int shown_samples = -1;
   bool running = true;
   while (running)
   {
-    // check if exit requested
+    // check user input 
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
       if (event.type == SDL_EVENT_QUIT)
+      {
         running = false;
-      if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
-        running = false;
+      }
+      if (event.type == SDL_EVENT_KEY_DOWN)
+      {
+        switch (event.key.key) {
+          case SDLK_ESCAPE:
+          {
+            running = false;
+            break;
+          }
+          case SDLK_SPACE:
+          {
+            control.pause.store(!control.pause.load());
+            break;
+          }
+          case SDLK_R:
+          {
+            start_render();
+            break;
+          }
+        }
+      }
     }
 
-    // render and copy to render texture
-    if (samples_done < max_samples)
+    // upload render buffer to screen
+    buffer.resolve();
+    if (!blit_buffer_to_texture(texture, buffer))
     {
-      int samples_to_do = 1;
-      if (ms_per_sample > 0.0)
-      {
-        samples_to_do = std::clamp(int(budget_ms_per_update / ms_per_sample), 1, 64); 
-      }
-      samples_to_do = std::min(samples_to_do, max_samples - samples_done); 
-      
-      double ms = r.render(camera, world, aovs, samples_to_do);
-      samples_done += samples_to_do;
-
-      if (ms > 0)
-      {
-        double measured = ms / samples_to_do;
-        ms_per_sample = (ms_per_sample == 0)
-          ? measured
-          : 0.7*ms_per_sample + 0.3*measured; // maintain value as an exponential moving average
-      }
-
-      if (texture == nullptr || texture->h != buffer.height() || texture->w != buffer.width())
-      {
-        if (texture != nullptr)
-        {
-          SDL_DestroyTexture(texture);
-        }
-
-        texture = SDL_CreateTexture(
-            renderer,
-            SDL_PIXELFORMAT_XRGB8888,      // format
-            SDL_TEXTUREACCESS_STREAMING,   // access
-            buffer.width(), buffer.height() // render resolution, NOT window size
-            );
-        SDL_SetRenderLogicalPresentation(renderer, buffer.width(), buffer.height(), SDL_LOGICAL_PRESENTATION_LETTERBOX);
-      }
-
-      buffer.resolve();
-      if (!blit_buffer_to_texture(texture, buffer))
-      {
-        std::clog << "Failed to blit buffer to texture: could not lock texture." << std::endl;
-      }
-
-      // config render texture
-      SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-
-      if (samples_done >= max_samples)
-      {
-        std::clog << "Finished rendering " << samples_done << " samples." << std::endl;
-      }
+      std::clog << "Failed to blit buffer to texture: could not lock texture." << std::endl;
     }
 
     // upload render texture
-    SDL_RenderClear(renderer);
-    SDL_RenderTexture(renderer, texture, nullptr, nullptr);  // src rect, dst rect
-    SDL_RenderPresent(renderer);
+    SDL_RenderClear(sdl_renderer);
+    SDL_RenderTexture(sdl_renderer, texture, nullptr, nullptr);  // src rect, dst rect
+    SDL_RenderPresent(sdl_renderer);
+
+    const int samples = r.completed_samples();
+    if (samples != shown_samples)
+    {
+      shown_samples = samples;
+      std::string title = "viewer - " + std::to_string(samples) + "/" +
+                          std::to_string(r.samples_to_converge) + " samples";
+      if (control.pause.load()) title += " (paused)";
+      if (buffer.is_converged()) title += " (converged)";
+      SDL_SetWindowTitle(window, title.c_str());
+    }
+
+    SDL_Delay(16);
   }
+
+  stop_render();
+  std::clog << "Stopped after " << stats.completed_samples << " samples in " << stats.ms / 1000.0
+            << "s" << (stats.stopped ? " (interrupted)" : "") << std::endl;
 
   std::clog << "Closing window" << std::endl;
   SDL_DestroyTexture(texture); 
-  SDL_DestroyRenderer(renderer);
+  SDL_DestroyRenderer(sdl_renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
+
   return 0;
 }

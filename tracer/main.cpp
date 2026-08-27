@@ -5,6 +5,7 @@
 #include "hittable_list.h"
 #include "example_scenes.h"
 #include "renderer.h"
+#include "schedulers.h"
 
 
 int main(int argc, char *argv[])
@@ -22,7 +23,11 @@ int main(int argc, char *argv[])
 
   renderer r;
   r.max_bounces = 10;
-  r.multithread = multithread;
+  r.samples_to_converge = 50;
+  if (multithread)
+  {
+    r.schedule = tbb_schedule;
+  }
 
   render_buffer color_buf, depth_buf;
   aov_bindings aovs = {
@@ -31,7 +36,7 @@ int main(int argc, char *argv[])
   };
 
   std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
-  double render_duration = r.render(cam, world, aovs, 50);
+  render_stats stats = r.render(cam, world, aovs);
   color_buf.resolve();
 
   // save buffer to image file
@@ -47,8 +52,8 @@ int main(int argc, char *argv[])
   }
 
   // output finish message
-  auto per_pixel = render_duration / (double(height) * width);
-  std::clog << "\rRendered scene " << i_scene << " in " << render_duration / double(1000) << "s ("
+  auto per_pixel = stats.ms / (double(height) * width);
+  std::clog << "\rRendered scene " << i_scene << " in " << stats.ms / double(1000) << "s ("
             << per_pixel << "ms/px)                       \n"
             << std::flush;
 }

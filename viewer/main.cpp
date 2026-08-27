@@ -6,31 +6,36 @@
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
 #include "camera.h"
-#include "framebuffer.h"
 #include "hittable_list.h"
+#include "render_buffer.h"
 #include "renderer.h"
 #include "example_scenes.h"
 
 
-bool blit_buffer_to_texture(SDL_Texture *texture, const framebuffer &buffer)
+bool blit_buffer_to_texture(SDL_Texture *texture, const render_buffer &buffer)
 {
   void *raw = nullptr;
   int pitch = 0;
 
-  if (!SDL_LockTexture(texture, nullptr, &raw, &pitch)) {
+  if (!SDL_LockTexture(texture, nullptr, &raw, &pitch))
+  {
     return false;
   }
 
-  for (int y = 0; y < buffer.height; y++) {
+  for (int y = 0; y < buffer.height(); y++)
+  {
     // pitch is BYTES per row and may exceed width*4 (alignment padding),
     // so step in bytes and only then reinterpret
     uint32_t *row = reinterpret_cast<uint32_t *>(static_cast<uint8_t *>(raw) + y * pitch);
-    const int base = y * buffer.width;
+    const int by = buffer.height() - 1 - y;
 
     // convert color to pixel directly into the render texture!
-    for (int x = 0; x < buffer.width; x++) {
+    for (int x = 0; x < buffer.width(); x++)
+    {
+      float rgba[4];
+      buffer.read(x, by, 4, rgba);
       int r, g, b;
-      color_to_rgb8(buffer.get_pixel(base + x), r, g, b);
+      color_to_rgb8(color(rgba[0], rgba[1], rgba[2]), r, g, b);
       row[x] = (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
     }
   }
@@ -67,9 +72,10 @@ int main()
 
   // reuse frame buffer and render texture 
   SDL_Texture *texture = nullptr;
-  framebuffer buffer;
-  buffer.allocate(render_width, render_height);
-
+  render_buffer buffer;
+  aov_bindings aovs = {
+    allocate_aov(buffer, aov::color, render_width, render_height)
+  };
 
   // clear screen to gray color
   std::clog << "Opening window..." << std::endl;
@@ -105,7 +111,7 @@ int main()
       }
       samples_to_do = std::min(samples_to_do, max_samples - samples_done); 
       
-      double ms = r.render(camera, world, buffer, samples_to_do);
+      double ms = r.render(camera, world, aovs, samples_to_do);
       samples_done += samples_to_do;
 
       if (ms > 0)
@@ -116,7 +122,7 @@ int main()
           : 0.7*ms_per_sample + 0.3*measured; // maintain value as an exponential moving average
       }
 
-      if (texture == nullptr || texture->h != buffer.height || texture->w != buffer.width)
+      if (texture == nullptr || texture->h != buffer.height() || texture->w != buffer.width())
       {
         if (texture != nullptr)
         {
@@ -127,11 +133,12 @@ int main()
             renderer,
             SDL_PIXELFORMAT_XRGB8888,      // format
             SDL_TEXTUREACCESS_STREAMING,   // access
-            buffer.width, buffer.height  // render resolution, NOT window size
+            buffer.width(), buffer.height() // render resolution, NOT window size
             );
-        SDL_SetRenderLogicalPresentation(renderer, buffer.width, buffer.height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        SDL_SetRenderLogicalPresentation(renderer, buffer.width(), buffer.height(), SDL_LOGICAL_PRESENTATION_LETTERBOX);
       }
 
+      buffer.resolve();
       if (!blit_buffer_to_texture(texture, buffer))
       {
         std::clog << "Failed to blit buffer to texture: could not lock texture." << std::endl;

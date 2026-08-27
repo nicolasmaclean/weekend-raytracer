@@ -23,7 +23,7 @@ kanban-plugin: board
 - [x] camera api refactor
 	- matrix-driven rays
 	- ortho/perspective
-- [ ] render target refactor (prepare framebuffer to work with hydra)
+- [x] render target refactor (prepare framebuffer to work with hydra)
 - [ ] interruptible tile-driven render loop
 	- [x] switch OMP to TBB
 - [ ] transform support

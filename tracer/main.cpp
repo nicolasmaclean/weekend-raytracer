@@ -24,16 +24,26 @@ int main(int argc, char *argv[])
   r.max_bounces = 10;
   r.multithread = multithread;
 
-  framebuffer buffer;
-  buffer.allocate(width, height);
+  render_buffer color_buf, depth_buf;
+  aov_bindings aovs = {
+    allocate_aov(color_buf, aov::color, width, height),
+    allocate_aov(depth_buf, aov::depth, width, height)
+  };
 
   std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
-  double render_duration = r.render(cam, world, buffer, 50);
+  double render_duration = r.render(cam, world, aovs, 50);
+  color_buf.resolve();
 
   // save buffer to image file
   std::cout << "P3\n" << width << " " << height << "\n255\n";
-  for (int i = 0; i < buffer.pixel_count; i++) {
-    write_color(std::cout, buffer.get_pixel(i));
+  for (int y = height - 1; y >= 0; y--)
+  {
+    for (int x = 0; x < width; x++)
+    {
+      float rgba[4];
+      color_buf.read(x, y, 4, rgba);
+      write_color(std::cout, color(rgba[0], rgba[1], rgba[2]));
+    }
   }
 
   // output finish message

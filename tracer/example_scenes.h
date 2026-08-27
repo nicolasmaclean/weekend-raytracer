@@ -1,15 +1,13 @@
-#ifndef EXAMPLE_SCENES_H
-#define EXAMPLE_SCENES_H
+#pragma once
+
+#include <cstdlib>
 
 #include "camera_desc.h"
 #include "camera.h"
-#include "framebuffer.h"
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
 #include "tracer.h"
-#include <cstdlib>
-#include <iostream>
 
 void scene_1(hittable_list &world, camera_desc &camera)
 {
@@ -135,4 +133,3 @@ inline void load_scene(int i, hittable_list &world, camera_desc &camera)
   }
 }
 
-#endif

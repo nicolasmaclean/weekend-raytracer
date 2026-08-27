@@ -42,12 +42,10 @@ public:
     double jy = jitter ? generator.uniform() : 0.5;
     double jx = jitter ? generator.uniform() : 0.5;
 
-    // pixel -> NDC across the data window.
+    // pixel -> NDC across the data window. The window is y-down and NDC is
+    // y-up, hence the sign inversion on y. The renderer flips the y-down row
+    // when it writes, so nothing here needs to know the buffer's line order.
     double ndc_x = 2 * ((x + jx - data_window.min_x) / double(data_window.width())) - 1;
-
-    // The data window is y-down and framebuffer.h is top-left origin, so row
-    // indices agree directly and no loop flip is needed. NDC is y-up, hence the
-    // sign inversion here. 
     double ndc_y = 1 - 2 * ((y + jy - data_window.min_y) / double(data_window.height()));
 
     // Un-project through the near plane (NDC z == -1) into view space.

@@ -8,7 +8,7 @@ target_compile_options(viewer
 
 # include ray tracer library
 target_include_directories(viewer PRIVATE ${CMAKE_SOURCE_DIR}/tracer)
-target_link_libraries(viewer PRIVATE tracer)
+target_link_libraries(viewer PRIVATE tracer tracer_obj)
 
 # include sdl3
 target_link_libraries(viewer PRIVATE SDL3::SDL3)

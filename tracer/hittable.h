@@ -26,6 +26,12 @@ public:
     front_face = dot(r.direction(), outward_normal) < 0;
     normal = front_face ? outward_normal : -outward_normal;
   }
+
+  void set_face_normal(const ray &r, const vec3 &geometric, const vec3 &shading)
+  {
+    front_face = dot(r.direction(), geometric) < 0;
+    normal = front_face ? shading : -shading;
+  }
 };
 
 class hittable

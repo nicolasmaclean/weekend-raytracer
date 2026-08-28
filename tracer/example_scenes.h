@@ -7,6 +7,8 @@
 #include "instance.h"
 #include "hittable_list.h"
 #include "material.h"
+#include "mesh.h"
+#include "obj_loader.h"
 #include "scene.h"
 #include "sphere.h"
 #include "triangle.h"
@@ -167,7 +169,7 @@ void scene_6(scene_edit &world, camera_desc &desc)
   // plane. Wound counter-clockwise as seen from +z, so cross(p1-p0, p2-p0)
   // points at the camera.
   const vec3 n_face(0, 0, 1);
-  world.insert(make_shared<triangle>(
+  world.insert(make_triangle(
     vertex{ vec3(-0.8, -0.4, -1), n_face },
     vertex{ vec3( 0.8, -0.4, -1), n_face },
     vertex{ vec3( 0.0,  0.9, -1), n_face },
@@ -183,6 +185,36 @@ void scene_6(scene_edit &world, camera_desc &desc)
   desc.lookat = vec3(0, 0.1, -1);
   desc.v_fov = 38;
   desc.focus_dist = 3.55;
+  desc.defocus_angle = 0;
+}
+
+// The icosphere asset, in scene_2's camera minus the defocus blur: the mesh
+// lands exactly where that scene's centre sphere is, same material, so a
+// smooth-shaded mesh can be measured against the sphere it approximates.
+void scene_7(scene_edit &world, camera_desc &desc)
+{
+  auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
+  auto m_body = make_shared<lambert>(color(0.1, 0.2, 0.5));
+
+  world.insert(make_shared<sphere>(vec3(0, -100.5, -1), 100, m_ground));
+
+  obj_load_result loaded = load_obj(std::string(TRACER_ASSET_DIR) + "/icosphere.obj", m_body);
+  if (!loaded.error.empty())
+  {
+    std::clog << "obj: " << loaded.error << "\n";
+  }
+
+  // One instance per mesh, never one per face: the ray is transformed once for
+  // the whole mesh. Row-vector convention, so the scale happens first.
+  for (const shared_ptr<mesh> &m : loaded.meshes)
+  {
+    world.insert(make_shared<instance>(m, scale(0.5) * translate(vec3(0, 0, -1))));
+  }
+
+  desc.lookfrom = vec3(0, 0, 0);
+  desc.lookat = vec3(0, 0, -1);
+  desc.v_fov = 90;
+  desc.focus_dist = 1;
   desc.defocus_angle = 0;
 }
 
@@ -208,6 +240,9 @@ inline void load_scene(int i, scene &world, camera_desc &camera)
     break;
   case 5:
     scene_6(edit, camera);
+    break;
+  case 6:
+    scene_7(edit, camera);
     break;
   }
 }

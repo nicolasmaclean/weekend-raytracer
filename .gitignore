@@ -7,6 +7,9 @@
 *.o
 *.obj
 
+# ...but Wavefront OBJ assets are source, not build output
+!/assets/*.obj
+
 # Precompiled Headers
 *.gch
 *.pch

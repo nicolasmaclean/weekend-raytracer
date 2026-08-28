@@ -27,7 +27,7 @@ kanban-plugin: board
 - [x] transform support
 - [x] scene graph with mutation
 - [x] triangle prim
-- [ ] triangle mesh (and tinyobjloader)
+- [x] triangle mesh (and tinyobjloader)
 - [ ] bvh with rebuild-on-mutation
 
 

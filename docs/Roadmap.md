@@ -21,14 +21,13 @@ kanban-plugin: board
 - [x] progressive rendering
 - [x] hdTiny stub delegate
 - [x] camera api refactor
-	- matrix-driven rays
-	- ortho/perspective
 - [x] render target refactor (prepare framebuffer to work with hydra)
 - [x] interruptible tile-driven render loop
 	- [x] switch OMP to TBB
 - [x] transform support
 - [x] scene graph with mutation
-- [ ] triangle mesh
+- [x] triangle prim
+- [ ] triangle mesh (and tinyobjloader)
 - [ ] bvh with rebuild-on-mutation
 
 

@@ -9,6 +9,7 @@
 #include "material.h"
 #include "scene.h"
 #include "sphere.h"
+#include "triangle.h"
 #include "tracer.h"
 
 void scene_1(scene_edit &world, camera_desc &camera)
@@ -154,6 +155,37 @@ void scene_5(scene_edit &world, camera_desc &desc)
   desc.defocus_angle = 0;
 }
 
+void scene_6(scene_edit &world, camera_desc &desc)
+{
+  auto m_ground = make_shared<lambert>(color(0.5, 0.5, 0.5));
+  auto m_tri = make_shared<lambert>(color(0.1, 0.2, 0.5));
+  auto m_behind = make_shared<metal>(color(0.8, 0.5, 0.2), 0.15);
+
+  world.insert(make_shared<sphere>(vec3(0, -100.5, -1), 100, m_ground));
+
+  // Upright isoceles triangle sitting just above the ground in the z = -1
+  // plane. Wound counter-clockwise as seen from +z, so cross(p1-p0, p2-p0)
+  // points at the camera.
+  const vec3 n_face(0, 0, 1);
+  world.insert(make_shared<triangle>(
+    vertex{ vec3(-0.8, -0.4, -1), n_face },
+    vertex{ vec3( 0.8, -0.4, -1), n_face },
+    vertex{ vec3( 0.0,  0.9, -1), n_face },
+    m_tri
+  ));
+
+  // Off to the side and behind the triangle's plane: should stay visible past
+  // the triangle's edge, and gives the flat face something to be measured
+  // against for depth.
+  world.insert(make_shared<sphere>(vec3(-1.5, -0.1, -2.2), 0.4, m_behind));
+
+  desc.lookfrom = vec3(0.9, 0.55, 2.4);
+  desc.lookat = vec3(0, 0.1, -1);
+  desc.v_fov = 38;
+  desc.focus_dist = 3.55;
+  desc.defocus_angle = 0;
+}
+
 inline void load_scene(int i, scene &world, camera_desc &camera)
 {
 
@@ -173,6 +205,9 @@ inline void load_scene(int i, scene &world, camera_desc &camera)
     break;
   case 4:
     scene_5(edit, camera);
+    break;
+  case 5:
+    scene_6(edit, camera);
     break;
   }
 }

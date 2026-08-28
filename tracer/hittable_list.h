@@ -16,6 +16,14 @@ public:
 
   void clear() { objects.clear(); }
 
+  void commit() override
+  {
+    for (const auto &obj : objects)
+    {
+      obj->commit();
+    }
+  }
+
   bool hit(const ray &r, interval clipping_range,
            hit_info &info) const override {
     hit_info temp_info;
@@ -27,6 +35,8 @@ public:
         did_hit = true;
         closest = temp_info.t;
         info = temp_info;
+        temp_info.instance_id = -1;
+        temp_info.element_id = -1;
       }
     }
 

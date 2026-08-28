@@ -24,6 +24,13 @@ public:
 
   const mat4 &object_to_world() const { return xform; }
 
+  int32_t instance_id = -1;
+
+  void commit() override
+  {
+    proto->commit();
+  }
+
   bool hit(const ray &r, interval clipping_range, hit_info &info) const override
   {
     if (!valid) return false;
@@ -36,6 +43,7 @@ public:
 
     info.p = r.at(info.t);
     info.normal = unit_vector(inv_t.transform_dir(info.normal));
+    info.instance_id = instance_id;
     return true;
   }
 

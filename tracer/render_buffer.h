@@ -311,7 +311,7 @@ private:
 
 // The AOVs the renderer knows how to fill. Named to match HdAovTokens
 // (pxr/imaging/hd/tokens.h) so the delegate's mapping is one switch.
-enum class aov { color, depth, camera_depth, normal, n_eye };
+enum class aov { color, depth, camera_depth, normal, n_eye, prim_id, instance_id, element_id };
 
 struct aov_binding {
   aov name;
@@ -338,6 +338,9 @@ inline aov_descriptor default_aov_descriptor(aov name)
     case aov::camera_depth: return {buffer_format::float32,      false, 1, {0, 0, 0, 0}};
     case aov::normal:
     case aov::n_eye:        return {buffer_format::float32_vec3, false, 3, {-1, -1, -1, 0}};
+    case aov::prim_id:
+    case aov::instance_id:
+    case aov::element_id:   return {buffer_format::int32, false, 1, {-1, 0, 0, 0}};
   }
   return {};
 }

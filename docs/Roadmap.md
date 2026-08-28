@@ -27,7 +27,7 @@ kanban-plugin: board
 - [x] interruptible tile-driven render loop
 	- [x] switch OMP to TBB
 - [x] transform support
-- [ ] scene graph with mutation
+- [x] scene graph with mutation
 - [ ] triangle mesh
 - [ ] bvh with rebuild-on-mutation
 

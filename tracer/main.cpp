@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "camera.h"
-#include "hittable_list.h"
+#include "scene.h"
 #include "example_scenes.h"
 #include "renderer.h"
 #include "schedulers.h"
@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
   int width  = argc > 3 ? atoi(argv[3]) : 400;
   int height = argc > 4 ? atoi(argv[4]) : 225;
 
-  hittable_list world;
+  scene world;
   camera_desc desc;
   load_scene(i_scene, world, desc);
 

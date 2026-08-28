@@ -6,7 +6,7 @@
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
 #include "camera.h"
-#include "hittable_list.h"
+#include "scene.h"
 #include "render_buffer.h"
 #include "render_control.h"
 #include "renderer.h"
@@ -72,12 +72,13 @@ int main(int argc, char *argv[])
 
   // prepare scene 
   int i_scene = argc > 1 ? atoi(argv[1]) : 1;
-  hittable_list world;
+  scene world;
   camera_desc desc;
   load_scene(i_scene, world, desc);
 
   const int render_width = 400, render_height = 225;
   camera cam = desc.build(render_width, render_height);
+  uint64_t last_version = world.version();
 
   // prepare renderer and buffer 
   struct renderer r;
@@ -113,6 +114,8 @@ int main(int argc, char *argv[])
     control.pause.store(false);
     render_thread = std::thread([&]() { stats = r.render(cam, world, aovs, &control); });
   };
+
+  world.set_stop_render(stop_render);
 
   // prepare render texture
   SDL_Texture *texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, render_width, render_height);
@@ -161,6 +164,14 @@ int main(int argc, char *argv[])
           }
         }
       }
+    }
+
+    // check if the scene is dirty
+    const uint64_t version = world.version();
+    if (version != last_version)
+    {
+      last_version = version;
+      start_render();
     }
 
     // upload render buffer to screen

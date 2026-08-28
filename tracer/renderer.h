@@ -36,7 +36,7 @@ struct renderer
 
   // Accumulates `samples` more samples per pixel into `buffer` over the
   // camera's data window. Returns elapsed milliseconds.
-  render_stats render(const camera &cam, const hittable &world, const aov_bindings &aovs, const render_control *control = nullptr)
+  render_stats render(const camera &cam, hittable &world, const aov_bindings &aovs, const render_control *control = nullptr)
   {
     auto start = high_resolution_clock::now();
     render_stats stats;
@@ -47,6 +47,7 @@ struct renderer
     }
 
     _completed_samples.store(0);
+    world.commit();
 
     for (const aov_binding &b : aovs)
     {
@@ -234,6 +235,33 @@ struct renderer
                     float(ne.z())
                   };
                   buffer.write(x, by, 3, n);
+
+                  break;
+                }
+
+              case aov::prim_id:
+                {
+                  if (!did_hit) break;
+                  const int32_t id = hit_info.prim_id;
+                  buffer.write(x, by, 1, &id);
+
+                  break;
+                }
+
+              case aov::instance_id:
+                {
+                  if (!did_hit) break;
+                  const int32_t id = hit_info.instance_id;
+                  buffer.write(x, by, 1, &id);
+
+                  break;
+                }
+
+              case aov::element_id:
+                {
+                  if (!did_hit) break;
+                  const int32_t id = hit_info.element_id;
+                  buffer.write(x, by, 1, &id);
 
                   break;
                 }

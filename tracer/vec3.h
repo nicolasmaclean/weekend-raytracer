@@ -10,6 +10,7 @@ public:
   double e[3];
 
   vec3() : e{0, 0, 0} {}
+  vec3(double x) : e{x, x, x} {}
   vec3(double x, double y, double z) : e{x, y, z} {}
 
   double x() const { return e[0]; }

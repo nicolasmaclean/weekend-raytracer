@@ -43,6 +43,12 @@ public:
     return true;
   }
 
+  aabb bounds() const override
+  {
+    const vec3 rad(radius, radius, radius);
+    return aabb { center-rad, center+rad};
+  }
+
 private:
   point3 center;
   double radius;

@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "bvh.h"
 #include "hittable.h"
 #include "vert.h"
 
@@ -10,6 +11,9 @@
 class mesh : public hittable
 {
 public:
+  // don't bother with bvh when faces < linear_threshold, linear search is faster 
+  static constexpr size_t linear_threshold = 4;
+
   std::vector<vec3> verts;
   std::vector<vec3> normals;
   std::vector<int32_t> tris;
@@ -40,27 +44,106 @@ public:
     normals.push_back(c.n);
   }
 
+  aabb bounds() const override { return accel.bounds(); }
+
   void commit() override
   {
-    geom.clear();
-    geom.reserve(triangle_count());
+    const size_t count = triangle_count();
 
+    geom.clear();
+    geom.reserve(count);
+
+    std::vector<aabb> boxes;
+    boxes.reserve(count);
+
+    // try refit and exit if successful
+    if (!accel.empty() && tri_index.size() == count)
+    {
+      for (int32_t f : tri_index)
+      {
+        const vec3 &p0 = verts[tris[3*f]];
+        const vec3 &p1 = verts[tris[3*f + 1]];
+        const vec3 &p2 = verts[tris[3*f + 2]];
+        geom.push_back({p0, p1-p0, p2-p0});
+
+        aabb b = aabb::empty();
+        b.expand(p0);
+        b.expand(p1);
+        b.expand(p2);
+        boxes.push_back(b);
+      }
+
+      accel.refit(boxes);
+      if (!accel.degraded()) return;
+
+      boxes.clear();
+      geom.clear();
+    }
+
+    // collect bounding boxes for clean rebuild
     for (size_t i = 0; i+2 < tris.size(); i += 3)
     {
       const vec3 &p0 = verts[tris[i]];
       const vec3 &p1 = verts[tris[i+1]];
       const vec3 &p2 = verts[tris[i+2]];
       geom.push_back({p0, p1-p0, p2-p0});
+
+      aabb b = aabb::empty();
+      b.expand(p0);
+      b.expand(p1);
+      b.expand(p2);
+      boxes.push_back(b);
     }
+
+    // build!
+    accel.build(boxes);
+
+    // propagate bvh order to geometry
+    const std::vector<int32_t> &order = accel.order();
+    std::vector<tri_geom> sorted;
+    sorted.reserve(order.size());
+    tri_index.assign(order.begin(), order.end());
+    for (int32_t src : order)
+    {
+      sorted.push_back(geom[src]);
+    }
+    geom.swap(sorted);
   }
 
   bool hit(const ray &r, interval clipping_range, hit_info &info) const override
   {
+    // skip bvh in favor of linear search for small face counts
+    if (geom.size() <= linear_threshold)
+    {
+      return intersect(r, 0, int32_t(geom.size()), clipping_range, info);
+    }
+
+    return accel.hit(
+      r, clipping_range, info,
+      [&](int32_t first, int32_t count, interval clip, hit_info &out)
+      {
+        return intersect(r, first, count, clip, out);
+      }
+    );
+  }
+
+private:
+  struct tri_geom
+  {
+    vec3 p0, e1, e2;
+  };
+
+  std::vector<tri_geom> geom;
+  std::vector<int32_t> tri_index;
+  bvh accel;
+
+  bool intersect(const ray &r, int32_t first, int32_t count, interval clip, hit_info &out) const
+  {
     int32_t best = -1;
-    double closest = clipping_range.max;
+    double closest = clip.max;
     double bu = 0, bv = 0;
 
-    for (size_t f = 0; f < geom.size(); f++)
+    for (int32_t f = first; f < first + count; f++)
     {
       const tri_geom &g = geom[f];
 
@@ -86,27 +169,33 @@ public:
       if (v < 0 || u + v > 1) continue;
 
       const double t = dot(g.e2, qv) * inv_det;
-      if (t <= clipping_range.min || t >= closest) continue;
+      if (t <= clip.min || t >= closest) continue;
 
-      best = int32_t(f);
+      best = f;
       closest = t;
       bu = u;
       bv = v;
     }
 
-    // ray didn't hit mesh at all
     if (best < 0) return false;
 
-    const tri_geom &g = geom[best];
+    fill(r, best, closest, bu, bv, out);
+    return true;
+  }
+
+  void fill(const ray &r, int32_t slot, double t, double bu, double bv, hit_info &info) const
+  {
+    const tri_geom &g = geom[slot];
     const vec3 ng = cross(g.e1, g.e2);   // geometric normal, not unit
+    const int32_t f = tri_index[slot];
 
     // calculate normal
     vec3 ns = ng;
     if (!normals.empty())
     {
-      const int32_t i0 = tris[3 * best + 0];
-      const int32_t i1 = tris[3 * best + 1];
-      const int32_t i2 = tris[3 * best + 2];
+      const int32_t i0 = tris[3 * f + 0];
+      const int32_t i1 = tris[3 * f + 1];
+      const int32_t i2 = tris[3 * f + 2];
       ns = (1 - bu - bv) * normals[i0] + bu * normals[i1] + bv * normals[i2];
 
       // Authored normals that cancel out, or that disagree with the winding.
@@ -116,21 +205,11 @@ public:
       else if (dot(ns, ng) < 0) ns = -ns;
     }
 
-    info.t = closest;
-    info.p = r.at(closest);
+    info.t = t;
+    info.p = r.at(t);
     info.mat = mat.get();
-    info.element_id = face.empty() ? best : face[best];
+    info.element_id = face.empty() ? f : face[f];
     info.set_face_normal(r, ng, unit_vector(ns));
-
-    return true;
   }
-
-private:
-  struct tri_geom
-  {
-    vec3 p0, e1, e2;
-  };
-
-  std::vector<tri_geom> geom;
 };
 

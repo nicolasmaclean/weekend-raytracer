@@ -28,24 +28,24 @@ kanban-plugin: board
 - [x] scene graph with mutation
 - [x] triangle prim
 - [x] triangle mesh (and tinyobjloader)
-- [ ] bvh with rebuild-on-mutation
+- [x] bvh with rebuild-on-mutation
 
 
 ## 0.3.0 - hydra delegate
 
-- [ ] hydra wrapper
-- [ ] usdview integration
+- [ ] hydra delegate + usdview
+- [ ] blender plugin
 
 
 ## 0.4.0 - more features!
 
-- [ ] blender plugin
 - [ ] texture mapping
 
 
 ## Wishlist
 
 - [ ] profiling tools
+- [ ] float/double compile option
 
 
 

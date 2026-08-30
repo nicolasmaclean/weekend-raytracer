@@ -6,6 +6,7 @@
 #include <mutex>
 #include <vector>
 
+#include "bvh.h"
 #include "hittable.h"
 
 
@@ -40,8 +41,10 @@ public:
       return;
     }
 
-    _draw.clear();
-
+    // `_visible` is the draw list in INSERTION order; `_draw` is the same
+    // list permuted into BVH order. Both are kept: the first is what tells a
+    // later commit whether the tree still describes this set of prims.
+    std::vector<entry> visible;
     for (const record &r : _slots)
     {
       if (r.prim == nullptr) continue;
@@ -49,12 +52,63 @@ public:
       r.prim->commit();
       if (r.visible)
       {
-        _draw.push_back({r.prim.get(), r.prim_id});
+        visible.push_back({r.prim.get(), r.prim_id});
       }
+    }
+
+    // check if geometry has changed
+    const bool same_set = !_tlas.empty() 
+      && visible.size() == _visible.size()
+      && std::equal(
+          visible.begin(), visible.end(), _visible.begin(),
+          [](const entry &a, const entry &b) {
+            return a.prim == b.prim && a.prim_id == b.prim_id;
+          });
+
+    _visible.swap(visible);
+
+    std::vector<aabb> boxes;
+    boxes.reserve(_visible.size());
+
+    // try refit
+    if (same_set)
+    {
+      for (int32_t src : _tlas.order())
+      {
+        boxes.push_back(_visible[src].prim->bounds());
+      }
+
+      _tlas.refit(boxes);
+      if (!_tlas.degraded())
+      {
+        return;
+      }
+
+      // case: too much degradation, continue to rebuild
+      boxes.clear();
+    }
+
+    // rebuild bvh
+    for (const entry &e : _visible)
+    {
+      boxes.push_back(e.prim->bounds());
+    }
+
+    _tlas.build(boxes);
+
+    _draw.clear();
+    _draw.reserve(_visible.size());
+    for (int32_t src : _tlas.order())
+    {
+      _draw.push_back(_visible[src]);
     }
   }
 
-  bool hit(const ray &r, interval clipping_range, hit_info &info) const override
+  aabb bounds() const override { return _tlas.bounds(); }
+
+  // check hit without using bvh. For small geometry sets, this is faster than 
+  // dealing with bvh
+  bool linear_hit(const ray &r, interval clipping_range, hit_info &info) const
   {
     hit_info temp_info;
     bool did_hit = false;
@@ -79,6 +133,48 @@ public:
     return did_hit;
   }
 
+  // Below this many prims, use linear_scan instead of bvh
+  // building and refit/rebuild of bvh is more expensive than its worth in this case
+  static constexpr size_t linear_threshold = 8;
+
+  bool hit(const ray &r, interval clipping_range, hit_info &info) const override
+  {
+    if (_draw.size() <= linear_threshold)
+    {
+      return linear_hit(r, clipping_range, info);
+    }
+
+    return _tlas.hit(r, clipping_range, info,
+      [&](int32_t first, int32_t count, interval clip, hit_info &out)
+      {
+        hit_info temp_info;
+        bool did_hit = false;
+        double closest = clip.max;
+
+        for (int32_t i = first; i < first + count; i++)
+        {
+          const entry &e = _draw[i];
+          if (!e.prim->hit(r, interval(clip.min, closest), temp_info))
+          {
+            continue;
+          }
+
+          did_hit = true;
+          closest = temp_info.t;
+          temp_info.prim_id = e.prim_id;
+          out = temp_info;
+
+          // The stale-id reset. A prim that does not write instance_id or
+          // element_id must not inherit the last one that did - see
+          // [[scene-graph]] step 9.
+          temp_info.instance_id = -1;
+          temp_info.element_id = -1;
+        }
+
+        return did_hit;
+      });
+  }
+
 private:
   friend class scene_edit;
 
@@ -97,8 +193,10 @@ private:
 
   std::vector<record> _slots;
   std::vector<prim_handle> _free;
+  std::vector<entry> _visible;   // insertion order
   std::vector<entry> _draw;
   size_t _live = 0;
+  bvh _tlas;
 
   std::function<void()> _stop_render;
   std::mutex _edit_lock;

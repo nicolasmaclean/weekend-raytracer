@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "aabb.h"
 #include "tracer.h"
 
 
@@ -42,5 +43,8 @@ public:
   virtual bool hit(const ray &r, interval clipping_range, hit_info &info) const = 0;
 
   virtual void commit() {}
+
+  // world-space bounding-box
+  virtual aabb bounds() const = 0;
 };
 

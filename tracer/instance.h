@@ -47,6 +47,25 @@ public:
     return true;
   }
 
+  aabb bounds() const override
+  {
+    if (!valid) return aabb::empty();
+
+    const aabb local = proto->bounds();
+    if (local.is_empty()) return aabb::empty();
+
+    aabb world = aabb::empty();
+    for (int i = 0; i < 8; i++)
+    {
+      const point3 corner(i & 1 ? local.hi[0] : local.lo[0],
+                          i & 2 ? local.hi[1] : local.lo[1],
+                          i & 4 ? local.hi[2] : local.lo[2]);
+      world.expand(xform.transform(corner));
+    }
+
+    return world;
+  }
+
 private:
   shared_ptr<hittable> proto;
   mat4 xform = mat4::identity();

@@ -42,4 +42,14 @@ public:
 
     return did_hit;
   }
+
+  aabb bounds() const override
+  {
+    aabb b = aabb::empty();
+    for (const auto &obj : objects)
+    {
+      b.expand(obj->bounds());
+    }
+    return b;
+  }
 };

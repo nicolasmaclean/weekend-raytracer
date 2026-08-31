@@ -7,10 +7,15 @@
 #ifndef HD_WEEKEND_RENDER_DELEGATE_H
 #define HD_WEEKEND_RENDER_DELEGATE_H
 
+#include <atomic>
+
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/renderDelegate.h"
+#include "pxr/imaging/hd/renderThread.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
 #include "pxr/base/tf/staticTokens.h"
+
+#include "renderer.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -69,6 +74,8 @@ public:
 
     HdRenderParam *GetRenderParam() const override;
 
+    HdAovDescriptor GetDefaultAovDescriptor(TfToken const& name) const override;
+
 private:
     static const TfTokenVector SUPPORTED_RPRIM_TYPES;
     static const TfTokenVector SUPPORTED_SPRIM_TYPES;
@@ -77,6 +84,19 @@ private:
     void _Initialize();
 
     HdResourceRegistrySharedPtr _resourceRegistry;
+
+    // The renderer is delegate-scoped: it holds the scene and the camera across
+    // _Execute calls so the pass has something to diff against. Every pass this
+    // delegate creates shares it.
+    HdWeekendRenderer _renderer;
+
+    // Unused until stage C, but the pass takes it in its constructor from now so
+    // that signature doesn't change when the thread arrives.
+    HdRenderThread _renderThread;
+
+    // Bumped by HdWeekendRenderParam on every scene edit (stage B). Starts at 1
+    // so the pass's _lastSceneVersion of 0 forces a first render.
+    std::atomic<int> _sceneVersion{1};
 
     // This class does not support copying.
     HdWeekendRenderDelegate(const HdWeekendRenderDelegate &) = delete;

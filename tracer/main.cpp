@@ -11,8 +11,8 @@
 int main(int argc, char *argv[])
 {
   int i_scene = argc > 1 ? atoi(argv[1]) : 0;
-  bool multithread = !(argc > 2 && atoi(argv[2]) > 0);
-  int width  = argc > 3 ? atoi(argv[3]) : 400;
+  bool multithread = argc <= 2 || atoi(argv[2]) <= 0;
+  int width = argc > 3 ? atoi(argv[3]) : 400;
   int height = argc > 4 ? atoi(argv[4]) : 225;
 
   scene world;
@@ -30,10 +30,8 @@ int main(int argc, char *argv[])
   }
 
   render_buffer color_buf, depth_buf;
-  aov_bindings aovs = {
-    allocate_aov(color_buf, aov::color, width, height),
-    allocate_aov(depth_buf, aov::depth, width, height)
-  };
+  aov_bindings aovs = {allocate_aov(color_buf, aov::color, width, height),
+                       allocate_aov(depth_buf, aov::depth, width, height)};
 
   std::clog << "Rendering scene " << " " << i_scene << "..." << std::flush;
   render_stats stats = r.render(cam, world, aovs);
@@ -53,7 +51,8 @@ int main(int argc, char *argv[])
 
   // output finish message
   auto per_pixel = stats.ms / (double(height) * width);
-  std::clog << "\rRendered scene " << i_scene << " in " << stats.ms / double(1000) << "s ("
-            << per_pixel << "ms/px)                       \n"
+  std::clog << "\rRendered scene " << i_scene << " in " << stats.ms / double(1000) << "s (" << per_pixel
+            << "ms/px)                       \n"
             << std::flush;
 }
+

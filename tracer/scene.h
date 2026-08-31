@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -18,21 +17,15 @@ class scene_edit;
 class scene : public hittable
 {
 public:
-  void set_stop_render(std::function<void()> stop)
-  {
-    _stop_render = std::move(stop);
-  }
+  void set_stop_render(std::function<void()> stop) { _stop_render = std::move(stop); }
 
   scene_edit edit();
 
-  uint64_t version() const
-  {
-    return _version.load(std::memory_order_acquire);
-  }
+  [[nodiscard]] uint64_t version() const { return _version.load(std::memory_order_acquire); }
 
-  size_t size() const { return _live; }
-  size_t slot_count() const { return _slots.size(); }
-  size_t draw_count() const { return _draw.size(); }
+  [[nodiscard]] size_t size() const { return _live; }
+  [[nodiscard]] size_t slot_count() const { return _slots.size(); }
+  [[nodiscard]] size_t draw_count() const { return _draw.size(); }
 
   void commit() override
   {
@@ -57,13 +50,10 @@ public:
     }
 
     // check if geometry has changed
-    const bool same_set = !_tlas.empty() 
-      && visible.size() == _visible.size()
-      && std::equal(
-          visible.begin(), visible.end(), _visible.begin(),
-          [](const entry &a, const entry &b) {
-            return a.prim == b.prim && a.prim_id == b.prim_id;
-          });
+    const bool same_set =
+        !_tlas.empty() && visible.size() == _visible.size() &&
+        std::equal(visible.begin(), visible.end(), _visible.begin(),
+                   [](const entry &a, const entry &b) { return a.prim == b.prim && a.prim_id == b.prim_id; });
 
     _visible.swap(visible);
 
@@ -104,9 +94,9 @@ public:
     }
   }
 
-  aabb bounds() const override { return _tlas.bounds(); }
+  [[nodiscard]] aabb bounds() const override { return _tlas.bounds(); }
 
-  // check hit without using bvh. For small geometry sets, this is faster than 
+  // check hit without using bvh. For small geometry sets, this is faster than
   // dealing with bvh
   bool linear_hit(const ray &r, interval clipping_range, hit_info &info) const
   {
@@ -145,34 +135,34 @@ public:
     }
 
     return _tlas.hit(r, clipping_range, info,
-      [&](int32_t first, int32_t count, interval clip, hit_info &out)
-      {
-        hit_info temp_info;
-        bool did_hit = false;
-        double closest = clip.max;
+                     [&](int32_t first, int32_t count, interval clip, hit_info &out)
+                     {
+                       hit_info temp_info;
+                       bool did_hit = false;
+                       double closest = clip.max;
 
-        for (int32_t i = first; i < first + count; i++)
-        {
-          const entry &e = _draw[i];
-          if (!e.prim->hit(r, interval(clip.min, closest), temp_info))
-          {
-            continue;
-          }
+                       for (int32_t i = first; i < first + count; i++)
+                       {
+                         const entry &e = _draw[i];
+                         if (!e.prim->hit(r, interval(clip.min, closest), temp_info))
+                         {
+                           continue;
+                         }
 
-          did_hit = true;
-          closest = temp_info.t;
-          temp_info.prim_id = e.prim_id;
-          out = temp_info;
+                         did_hit = true;
+                         closest = temp_info.t;
+                         temp_info.prim_id = e.prim_id;
+                         out = temp_info;
 
-          // The stale-id reset. A prim that does not write instance_id or
-          // element_id must not inherit the last one that did - see
-          // [[scene-graph]] step 9.
-          temp_info.instance_id = -1;
-          temp_info.element_id = -1;
-        }
+                         // The stale-id reset. A prim that does not write instance_id or
+                         // element_id must not inherit the last one that did - see
+                         // [[scene-graph]] step 9.
+                         temp_info.instance_id = -1;
+                         temp_info.element_id = -1;
+                       }
 
-        return did_hit;
-      });
+                       return did_hit;
+                     });
   }
 
 private:
@@ -193,15 +183,15 @@ private:
 
   std::vector<record> _slots;
   std::vector<prim_handle> _free;
-  std::vector<entry> _visible;   // insertion order
+  std::vector<entry> _visible; // insertion order
   std::vector<entry> _draw;
   size_t _live = 0;
   bvh _tlas;
 
   std::function<void()> _stop_render;
   std::mutex _edit_lock;
-  std::atomic<uint64_t> _version {0};
-  std::atomic<bool> _dirty {false};
+  std::atomic<uint64_t> _version{0};
+  std::atomic<bool> _dirty{false};
 };
 
 
@@ -226,10 +216,10 @@ public:
       h = prim_handle(_s->_slots.size());
       _s->_slots.emplace_back();
     }
-    
+
     _s->_slots[h] = {std::move(prim), -1, true};
     _s->_live++;
-    
+
     return h;
   }
 
@@ -245,15 +235,9 @@ public:
     return true;
   }
 
-  void set_prim_id(prim_handle h, int32_t id)
-  {
-    _s->_slots[h].prim_id = id;
-  }
+  void set_prim_id(prim_handle h, int32_t id) { _s->_slots[h].prim_id = id; }
 
-  void set_visible(prim_handle h, bool visible)
-  {
-    _s->_slots[h].visible = visible;
-  }
+  void set_visible(prim_handle h, bool visible) { _s->_slots[h].visible = visible; }
 
   void remove(prim_handle h)
   {

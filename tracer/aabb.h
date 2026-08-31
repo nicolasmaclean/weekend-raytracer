@@ -6,26 +6,17 @@
 
 struct aabb
 {
-  point3 lo { infinity, infinity, infinity };
-  point3 hi { -infinity, -infinity, -infinity };
+  point3 lo{infinity, infinity, infinity};
+  point3 hi{-infinity, -infinity, -infinity};
 
-  static aabb empty()
-  {
-    return aabb{};
-  }
+  static aabb empty() { return aabb{}; }
 
   static aabb infinite()
   {
-    return aabb{
-      point3(-infinity, -infinity, -infinity),
-      point3(infinity, infinity, infinity)
-    };
+    return aabb{point3(-infinity, -infinity, -infinity), point3(infinity, infinity, infinity)};
   }
 
-  bool is_empty() const
-  {
-    return hi[0] < lo[0] || hi[1] < lo[1] || hi[2] < lo[2];
-  }
+  [[nodiscard]] bool is_empty() const { return hi[0] < lo[0] || hi[1] < lo[1] || hi[2] < lo[2]; }
 
   void expand(const point3 &p)
   {
@@ -45,24 +36,24 @@ struct aabb
     }
   }
 
-  vec3 extent() const
+  [[nodiscard]] vec3 extent() const
   {
-    if (is_empty()) return vec3();
-    return hi-lo;
+    if (is_empty()) return {};
+    return hi - lo;
   }
 
-  double surface_area() const
+  [[nodiscard]] double surface_area() const
   {
     if (is_empty()) return 0;
-    vec3 extent = hi-lo;
-    return 2 * (extent[0]*extent[1] + extent[0]*extent[2] + extent[1]*extent[2]);
+    vec3 extent = hi - lo;
+    return 2 * (extent[0] * extent[1] + extent[0] * extent[2] + extent[1] * extent[2]);
   }
 
-  point3 centroid() const
+  [[nodiscard]] point3 centroid() const
   {
     if (is_empty())
     {
-      return point3();
+      return {};
     }
 
     return 0.5 * (lo + hi);
@@ -80,14 +71,14 @@ struct slab_ray
 {
   point3 o;
   vec3 inv;
-  int neg[3];
+  bool neg[3];
 
   explicit slab_ray(const ray &r) : o(r.origin())
   {
     const vec3 &d = r.direction();
     for (int a = 0; a < 3; a++)
     {
-      inv[a] = 1/d[a];
+      inv[a] = 1 / d[a];
       neg[a] = inv[a] < 0;
     }
   }

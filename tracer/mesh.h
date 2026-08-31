@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <vector>
 
 #include "bvh.h"
@@ -11,7 +10,7 @@
 class mesh : public hittable
 {
 public:
-  // don't bother with bvh when faces < linear_threshold, linear search is faster 
+  // don't bother with bvh when faces < linear_threshold, linear search is faster
   static constexpr size_t linear_threshold = 4;
 
   std::vector<vec3> verts;
@@ -20,20 +19,17 @@ public:
   std::vector<int32_t> face;
   shared_ptr<material> mat;
 
-  size_t triangle_count() const
-  {
-    return tris.size() / 3;
-  }
+  [[nodiscard]] size_t triangle_count() const { return tris.size() / 3; }
 
   void add_triangle(const point3 &a, const point3 &b, const point3 &c)
   {
-    const int32_t base = int32_t(verts.size());
+    const auto base = int32_t(verts.size());
     verts.push_back(a);
     verts.push_back(b);
     verts.push_back(c);
     tris.push_back(base);
-    tris.push_back(base+1);
-    tris.push_back(base+2);
+    tris.push_back(base + 1);
+    tris.push_back(base + 2);
   }
 
   void add_triangle(const vertex &a, const vertex &b, const vertex &c)
@@ -44,7 +40,7 @@ public:
     normals.push_back(c.n);
   }
 
-  aabb bounds() const override { return accel.bounds(); }
+  [[nodiscard]] aabb bounds() const override { return accel.bounds(); }
 
   void commit() override
   {
@@ -61,10 +57,10 @@ public:
     {
       for (int32_t f : tri_index)
       {
-        const vec3 &p0 = verts[tris[3*f]];
-        const vec3 &p1 = verts[tris[3*f + 1]];
-        const vec3 &p2 = verts[tris[3*f + 2]];
-        geom.push_back({p0, p1-p0, p2-p0});
+        const vec3 &p0 = verts[tris[3 * f]];
+        const vec3 &p1 = verts[tris[3 * f + 1]];
+        const vec3 &p2 = verts[tris[3 * f + 2]];
+        geom.push_back({p0, p1 - p0, p2 - p0});
 
         aabb b = aabb::empty();
         b.expand(p0);
@@ -81,12 +77,12 @@ public:
     }
 
     // collect bounding boxes for clean rebuild
-    for (size_t i = 0; i+2 < tris.size(); i += 3)
+    for (size_t i = 0; i + 2 < tris.size(); i += 3)
     {
       const vec3 &p0 = verts[tris[i]];
-      const vec3 &p1 = verts[tris[i+1]];
-      const vec3 &p2 = verts[tris[i+2]];
-      geom.push_back({p0, p1-p0, p2-p0});
+      const vec3 &p1 = verts[tris[i + 1]];
+      const vec3 &p2 = verts[tris[i + 2]];
+      geom.push_back({p0, p1 - p0, p2 - p0});
 
       aabb b = aabb::empty();
       b.expand(p0);
@@ -118,13 +114,8 @@ public:
       return intersect(r, 0, int32_t(geom.size()), clipping_range, info);
     }
 
-    return accel.hit(
-      r, clipping_range, info,
-      [&](int32_t first, int32_t count, interval clip, hit_info &out)
-      {
-        return intersect(r, first, count, clip, out);
-      }
-    );
+    return accel.hit(r, clipping_range, info, [&](int32_t first, int32_t count, interval clip, hit_info &out)
+                     { return intersect(r, first, count, clip, out); });
   }
 
 private:
@@ -186,7 +177,7 @@ private:
   void fill(const ray &r, int32_t slot, double t, double bu, double bv, hit_info &info) const
   {
     const tri_geom &g = geom[slot];
-    const vec3 ng = cross(g.e1, g.e2);   // geometric normal, not unit
+    const vec3 ng = cross(g.e1, g.e2); // geometric normal, not unit
     const int32_t f = tri_index[slot];
 
     // calculate normal
@@ -201,8 +192,10 @@ private:
       // Authored normals that cancel out, or that disagree with the winding.
       // Both are bad data; neither should produce a black pixel or a scatter
       // into the surface.
-      if (ns.near_zero())       ns = ng;
-      else if (dot(ns, ng) < 0) ns = -ns;
+      if (ns.near_zero())
+        ns = ng;
+      else if (dot(ns, ng) < 0)
+        ns = -ns;
     }
 
     info.t = t;

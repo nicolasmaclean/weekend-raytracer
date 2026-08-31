@@ -36,7 +36,8 @@ struct renderer
 
   // Accumulates `samples` more samples per pixel into `buffer` over the
   // camera's data window. Returns elapsed milliseconds.
-  render_stats render(const camera &cam, hittable &world, const aov_bindings &aovs, const render_control *control = nullptr)
+  render_stats render(const camera &cam, hittable &world, const aov_bindings &aovs,
+                      const render_control *control = nullptr)
   {
     auto start = high_resolution_clock::now();
     render_stats stats;
@@ -55,9 +56,7 @@ struct renderer
     }
 
     const tile_grid grid(cam.data_window, tile_size);
-    const int passes = any_multisample(aovs)
-      ? std::max(samples_to_converge, 1)
-      : 1;
+    const int passes = any_multisample(aovs) ? std::max(samples_to_converge, 1) : 1;
 
     for (int pass = 0; pass < passes; pass++)
     {
@@ -79,9 +78,7 @@ struct renderer
       }
 
       schedule(grid.count(), [&](size_t begin, size_t end)
-      {
-        render_tiles(cam, world, aovs, grid, pass, begin, end, control);
-      });
+               { render_tiles(cam, world, aovs, grid, pass, begin, end, control); });
 
       // 1st pass marks single-pass aov to done
       if (pass == 0)
@@ -102,7 +99,7 @@ struct renderer
         break;
       }
 
-      _completed_samples.store(pass+1);
+      _completed_samples.store(pass + 1);
     }
 
     for (const aov_binding &b : aovs)
@@ -117,10 +114,8 @@ struct renderer
     return stats;
   }
 
-  void render_tiles(const camera &cam, const hittable &world, const aov_bindings &aovs, 
-      const tile_grid &grid, int sample_pass, 
-      size_t begin, size_t end, 
-      const render_control *control = nullptr) const
+  void render_tiles(const camera &cam, const hittable &world, const aov_bindings &aovs, const tile_grid &grid,
+                    int sample_pass, size_t begin, size_t end, const render_control *control = nullptr) const
   {
     const int height = aovs[0].buffer->height();
     const int width = aovs[0].buffer->width();
@@ -180,91 +175,80 @@ struct renderer
 
             switch (aov.name)
             {
-              case aov::color:
-                {
-                  const float rgba[4] = {
-                    float(pixel_color.x()),
-                    float(pixel_color.y()),
-                    float(pixel_color.z()),
-                    1
-                  };
-                  buffer.write(x, by, 4, rgba);
+            case aov::color:
+            {
+              const float rgba[4] = {float(pixel_color.x()), float(pixel_color.y()), float(pixel_color.z()),
+                                     1};
+              buffer.write(x, by, 4, rgba);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::depth:
-                {
-                  if (!did_hit) break;
-                  const vec3 clip = cam.proj_matrix().transform(cam.view_matrix().transform(hit_info.p));
-                  const float d = float((clip.z() + 1) / 2);
-                  buffer.write(x, by, 1, &d);
+            case aov::depth:
+            {
+              if (!did_hit) break;
+              const vec3 clip = cam.proj_matrix().transform(cam.view_matrix().transform(hit_info.p));
+              const auto d = float((clip.z() + 1) / 2);
+              buffer.write(x, by, 1, &d);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::camera_depth:
-                {
-                  if (!did_hit) break;
-                  const float d = float(hit_info.t);
-                  buffer.write(x, by, 1, &d);
+            case aov::camera_depth:
+            {
+              if (!did_hit) break;
+              const auto d = float(hit_info.t);
+              buffer.write(x, by, 1, &d);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::normal:
-                {
-                  if (!did_hit) break;
-                  const float n[3] = {
-                    float(hit_info.normal.x()),
-                    float(hit_info.normal.y()),
-                    float(hit_info.normal.z())
-                  };
-                  buffer.write(x, by, 3, n);
+            case aov::normal:
+            {
+              if (!did_hit) break;
+              const float n[3] = {float(hit_info.normal.x()), float(hit_info.normal.y()),
+                                  float(hit_info.normal.z())};
+              buffer.write(x, by, 3, n);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::n_eye:
-                {
-                  if (!did_hit) break;
-                  const vec3 ne = unit_vector(cam.view_matrix().transform_dir(hit_info.normal));
-                  const float n[3] = {
-                    float(ne.x()),
-                    float(ne.y()),
-                    float(ne.z())
-                  };
-                  buffer.write(x, by, 3, n);
+            case aov::n_eye:
+            {
+              if (!did_hit) break;
+              const vec3 ne = unit_vector(cam.view_matrix().transform_dir(hit_info.normal));
+              const float n[3] = {float(ne.x()), float(ne.y()), float(ne.z())};
+              buffer.write(x, by, 3, n);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::prim_id:
-                {
-                  if (!did_hit) break;
-                  const int32_t id = hit_info.prim_id;
-                  buffer.write(x, by, 1, &id);
+            case aov::prim_id:
+            {
+              if (!did_hit) break;
+              const int32_t id = hit_info.prim_id;
+              buffer.write(x, by, 1, &id);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::instance_id:
-                {
-                  if (!did_hit) break;
-                  const int32_t id = hit_info.instance_id;
-                  buffer.write(x, by, 1, &id);
+            case aov::instance_id:
+            {
+              if (!did_hit) break;
+              const int32_t id = hit_info.instance_id;
+              buffer.write(x, by, 1, &id);
 
-                  break;
-                }
+              break;
+            }
 
-              case aov::element_id:
-                {
-                  if (!did_hit) break;
-                  const int32_t id = hit_info.element_id;
-                  buffer.write(x, by, 1, &id);
+            case aov::element_id:
+            {
+              if (!did_hit) break;
+              const int32_t id = hit_info.element_id;
+              buffer.write(x, by, 1, &id);
 
-                  break;
-                }
+              break;
+            }
             }
           }
         }
@@ -272,15 +256,12 @@ struct renderer
     }
   }
 
-  int completed_samples() const
-  {
-    return _completed_samples.load();
-  }
+  [[nodiscard]] int completed_samples() const { return _completed_samples.load(); }
 
 private:
-  std::atomic<int> _completed_samples { 0 };
+  std::atomic<int> _completed_samples{0};
 
-  bool validate(const camera &cam, const aov_bindings &aovs)
+  static bool validate(const camera &cam, const aov_bindings &aovs)
   {
     if (aovs.empty())
     {
@@ -316,27 +297,28 @@ private:
   {
     for (const aov_binding &b : aovs)
     {
-        if (b.buffer->is_multisampled())
-        {
-          return true;
-        }
+      if (b.buffer->is_multisampled())
+      {
+        return true;
+      }
     }
 
     return false;
   }
 
 
-  color raycast(rng &generator, const ray &r, int depth, const hittable &world, hit_info *primary, bool *did_hit) const
+  color raycast(rng &generator, const ray &r, int depth, const hittable &world, hit_info *primary,
+                bool *did_hit) const
   {
     if (depth <= 0)
     {
-      return color(0, 0, 0);
+      return {0, 0, 0};
     }
 
     hit_info hit;
     if (world.hit(r, interval(0.001, infinity), hit))
     {
-      if (primary)
+      if (primary != nullptr)
       {
         *primary = hit;
         *did_hit = true;
@@ -349,7 +331,7 @@ private:
         return attenuation * raycast(generator, bounced, depth - 1, world, nullptr, nullptr);
       }
 
-      return color(0, 0, 0);
+      return {0, 0, 0};
     }
 
     vec3 unit_direction = unit_vector(r.direction());

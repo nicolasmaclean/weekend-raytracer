@@ -45,6 +45,6 @@ public:
   virtual void commit() {}
 
   // world-space bounding-box
-  virtual aabb bounds() const = 0;
+  [[nodiscard]] virtual aabb bounds() const = 0;
 };
 

@@ -14,17 +14,17 @@
 enum class buffer_format : int {
   invalid = -1,
 
-  unorm8 = 0,  // a byte holding a float in [0,1]
+  unorm8 = 0, // a byte holding a float in [0,1]
   unorm8_vec2,
   unorm8_vec3,
   unorm8_vec4,
 
-  snorm8,  // a byte holding a float in [-1,1]
+  snorm8, // a byte holding a float in [-1,1]
   snorm8_vec2,
   snorm8_vec3,
   snorm8_vec4,
 
-  float16,  // NOT SUPPORTED - allocate() rejects it.
+  float16, // NOT SUPPORTED - allocate() rejects it.
   float16_vec2,
   float16_vec3,
   float16_vec4,
@@ -34,12 +34,12 @@ enum class buffer_format : int {
   float32_vec3,
   float32_vec4,
 
-  int16,  // NOT SUPPORTED
+  int16, // NOT SUPPORTED
   int16_vec2,
   int16_vec3,
   int16_vec4,
 
-  uint16,  // NOT SUPPORTED
+  uint16, // NOT SUPPORTED
   uint16_vec2,
   uint16_vec3,
   uint16_vec4,
@@ -62,23 +62,25 @@ inline int component_count(buffer_format f)
 
 inline component_type component_of(buffer_format f)
 {
-  switch (int(f) / 4) {
-    case 0: return component_type::unorm8;
-    case 1: return component_type::snorm8;
-    case 3: return component_type::float32;
-    case 6: return component_type::int32;
-    default: return component_type::unsupported;  // float16, int16, uint16
+  switch (int(f) / 4)
+  {
+  case 0: return component_type::unorm8;
+  case 1: return component_type::snorm8;
+  case 3: return component_type::float32;
+  case 6: return component_type::int32;
+  default: return component_type::unsupported; // float16, int16, uint16
   }
 }
 
 inline int component_size(component_type c)
 {
-  switch (c) {
-    case component_type::unorm8:
-    case component_type::snorm8: return 1;
-    case component_type::float32:
-    case component_type::int32: return 4;
-    default: return 0;
+  switch (c)
+  {
+  case component_type::unorm8:
+  case component_type::snorm8: return 1;
+  case component_type::float32:
+  case component_type::int32: return 4;
+  default: return 0;
   }
 }
 
@@ -93,15 +95,13 @@ inline int format_size(buffer_format f)
 inline buffer_format sample_format_of(buffer_format f)
 {
   int n = component_count(f);
-  switch (component_of(f)) {
-    case component_type::unorm8:
-    case component_type::snorm8:
-    case component_type::float32:
-      return buffer_format(int(buffer_format::float32) + n - 1);
-    case component_type::int32:
-      return buffer_format(int(buffer_format::int32) + n - 1);
-    default:
-      return buffer_format::invalid;
+  switch (component_of(f))
+  {
+  case component_type::unorm8:
+  case component_type::snorm8:
+  case component_type::float32: return buffer_format(int(buffer_format::float32) + n - 1);
+  case component_type::int32: return buffer_format(int(buffer_format::int32) + n - 1);
+  default: return buffer_format::invalid;
   }
 }
 
@@ -112,7 +112,8 @@ public:
   {
     deallocate();
 
-    if (w < 0 || h < 0 || component_of(f) == component_type::unsupported) {
+    if (w < 0 || h < 0 || component_of(f) == component_type::unsupported)
+    {
       return false;
     }
 
@@ -122,7 +123,8 @@ public:
     _resolved.resize(size_t(w) * h * format_size(f));
 
     _multisampled = multisampled;
-    if (_multisampled) {
+    if (_multisampled)
+    {
       _samples.resize(size_t(w) * h * format_size(sample_format_of(f)));
       _sample_count.resize(size_t(w) * h);
     }
@@ -130,11 +132,11 @@ public:
     return true;
   }
 
-  int width() const { return _width; }
-  int height() const { return _height; }
-  int depth() const { return 1; }
-  buffer_format format() const { return _format; }
-  bool is_multisampled() const { return _multisampled; }
+  [[nodiscard]] int width() const { return _width; }
+  [[nodiscard]] int height() const { return _height; }
+  [[nodiscard]] static int depth() { return 1; }
+  [[nodiscard]] buffer_format format() const { return _format; }
+  [[nodiscard]] bool is_multisampled() const { return _multisampled; }
 
   void *map()
   {
@@ -142,9 +144,9 @@ public:
     return _resolved.data();
   }
   void unmap() { _mappers--; }
-  bool is_mapped() const { return _mappers.load() != 0; }
+  [[nodiscard]] bool is_mapped() const { return _mappers.load() != 0; }
 
-  bool is_converged() const { return _converged.load(); }
+  [[nodiscard]] bool is_converged() const { return _converged.load(); }
   void set_converged(bool c) { _converged.store(c); }
 
   // Divide accumulation by count and convert into the resolved buffer. Cheap
@@ -152,7 +154,8 @@ public:
   // legible to the host.
   void resolve()
   {
-    if (!_multisampled) {
+    if (!_multisampled)
+    {
       return;
     }
 
@@ -161,18 +164,24 @@ public:
     const int out_stride = format_size(_format);
     const int in_stride = format_size(sample_format_of(_format));
 
-    for (size_t i = 0; i < size_t(_width) * _height; i++) {
+    for (size_t i = 0; i < size_t(_width) * _height; i++)
+    {
       const uint32_t count = _sample_count[i];
-      if (count == 0) {
+      if (count == 0)
+      {
         continue;
       }
 
       uint8_t *dst = &_resolved[i * out_stride];
       const uint8_t *src = &_samples[i * in_stride];
-      for (int c = 0; c < n; c++) {
-        if (comp == component_type::int32) {
+      for (int c = 0; c < n; c++)
+      {
+        if (comp == component_type::int32)
+        {
           ((int32_t *)dst)[c] = ((const int32_t *)src)[c] / int32_t(count);
-        } else {
+        }
+        else
+        {
           _store(comp, dst, c, ((const float *)src)[c] / float(count));
         }
       }
@@ -199,10 +208,13 @@ public:
   void write(int x, int y, int n, const float *v)
   {
     const size_t i = size_t(y) * _width + x;
-    if (_multisampled) {
+    if (_multisampled)
+    {
       _accumulate(&_samples[i * format_size(sample_format_of(_format))], n, v);
       _sample_count[i]++;
-    } else {
+    }
+    else
+    {
       _store_all(&_resolved[i * format_size(_format)], n, v);
     }
   }
@@ -210,33 +222,37 @@ public:
   void write(int x, int y, int n, const int32_t *v)
   {
     const size_t i = size_t(y) * _width + x;
-    if (_multisampled) {
+    if (_multisampled)
+    {
       _accumulate(&_samples[i * format_size(sample_format_of(_format))], n, v);
       _sample_count[i]++;
-    } else {
+    }
+    else
+    {
       _store_all(&_resolved[i * format_size(_format)], n, v);
     }
   }
 
   // Set every resolved pixel, and zero the accumulation. This is the AOV clear
   // value, not a memset: `color` clears to (0,0,0,0), `depth` to 1.0.
-  template <typename T>
-  void clear(int n, const T *v)
+  template <typename T> void clear(int n, const T *v)
   {
     const int stride = format_size(_format);
-    for (size_t i = 0; i < size_t(_width) * _height; i++) {
+    for (size_t i = 0; i < size_t(_width) * _height; i++)
+    {
       _store_all(&_resolved[i * stride], n, v);
     }
 
-    if (_multisampled) {
-      std::fill(_sample_count.begin(), _sample_count.end(), 0u);
+    if (_multisampled)
+    {
+      std::fill(_sample_count.begin(), _sample_count.end(), 0U);
       std::fill(_samples.begin(), _samples.end(), uint8_t(0));
     }
   }
 
   // How many samples pixel (x,y) has taken. The renderer needs it to seed its
   // rng deterministically across batches.
-  uint32_t samples_at(int x, int y) const
+  [[nodiscard]] uint32_t samples_at(int x, int y) const
   {
     return _multisampled ? _sample_count[size_t(y) * _width + x] : 0;
   }
@@ -249,51 +265,58 @@ public:
     const int have = component_count(_format);
     const uint8_t *src = &_resolved[(size_t(y) * _width + x) * format_size(_format)];
 
-    for (int c = 0; c < n; c++) {
-      if (c >= have) {
+    for (int c = 0; c < n; c++)
+    {
+      if (c >= have)
+      {
         out[c] = 0;
         continue;
       }
-      switch (comp) {
-        case component_type::unorm8: out[c] = ((const uint8_t *)src)[c] / 255.0f; break;
-        case component_type::snorm8: out[c] = std::max(((const int8_t *)src)[c] / 127.0f, -1.0f); break;
-        case component_type::int32: out[c] = float(((const int32_t *)src)[c]); break;
-        default: out[c] = ((const float *)src)[c]; break;
+      switch (comp)
+      {
+      case component_type::unorm8: out[c] = ((const uint8_t *)src)[c] / 255.0F; break;
+      case component_type::snorm8: out[c] = std::max(((const int8_t *)src)[c] / 127.0F, -1.0F); break;
+      case component_type::int32: out[c] = float(((const int32_t *)src)[c]); break;
+      default: out[c] = ((const float *)src)[c]; break;
       }
     }
   }
 
 private:
-  template <typename T>
-  void _accumulate(uint8_t *dst, int n, const T *v)
+  template <typename T> void _accumulate(uint8_t *dst, int n, const T *v)
   {
     const bool ints = component_of(_format) == component_type::int32;
-    for (int c = 0; c < component_count(_format); c++) {
+    for (int c = 0; c < component_count(_format); c++)
+    {
       const T value = c < n ? v[c] : T(0);
-      if (ints) {
+      if (ints)
+      {
         ((int32_t *)dst)[c] += int32_t(value);
-      } else {
+      }
+      else
+      {
         ((float *)dst)[c] += float(value);
       }
     }
   }
 
-  template <typename T>
-  void _store_all(uint8_t *dst, int n, const T *v)
+  template <typename T> void _store_all(uint8_t *dst, int n, const T *v)
   {
     const component_type comp = component_of(_format);
-    for (int c = 0; c < component_count(_format); c++) {
-      _store(comp, dst, c, c < n ? float(v[c]) : 0.0f);
+    for (int c = 0; c < component_count(_format); c++)
+    {
+      _store(comp, dst, c, c < n ? float(v[c]) : 0.0F);
     }
   }
 
   static void _store(component_type comp, uint8_t *dst, int c, float value)
   {
-    switch (comp) {
-      case component_type::unorm8: ((uint8_t *)dst)[c] = uint8_t(value * 255.0f); break;
-      case component_type::snorm8: ((int8_t *)dst)[c] = int8_t(value * 127.0f); break;
-      case component_type::int32: ((int32_t *)dst)[c] = int32_t(value); break;
-      default: ((float *)dst)[c] = value; break;
+    switch (comp)
+    {
+    case component_type::unorm8: ((uint8_t *)dst)[c] = uint8_t(value * 255.0F); break;
+    case component_type::snorm8: ((int8_t *)dst)[c] = int8_t(value * 127.0F); break;
+    case component_type::int32: ((int32_t *)dst)[c] = int32_t(value); break;
+    default: ((float *)dst)[c] = value; break;
     }
   }
 
@@ -313,7 +336,8 @@ private:
 // (pxr/imaging/hd/tokens.h) so the delegate's mapping is one switch.
 enum class aov { color, depth, camera_depth, normal, n_eye, prim_id, instance_id, element_id };
 
-struct aov_binding {
+struct aov_binding
+{
   aov name;
   render_buffer *buffer = nullptr;
 };
@@ -323,24 +347,26 @@ using aov_bindings = std::vector<aov_binding>;
 // hdEmbree's AOV table (spec §8.3), in tracer terms. The delegate's
 // GetDefaultAovDescriptor is a translation of this, and the cli/viewer use it to
 // allocate and clear - one table, both consumers.
-struct aov_descriptor {
+struct aov_descriptor
+{
   buffer_format format = buffer_format::float32_vec4;
   bool multisampled = false;
   int clear_components = 0;
-  float clear_value[4] = {0, 0, 0, 0};  // ids are small enough to be exact in float
+  float clear_value[4] = {0, 0, 0, 0}; // ids are small enough to be exact in float
 };
 
 inline aov_descriptor default_aov_descriptor(aov name)
 {
-  switch (name) {
-    case aov::color:        return {buffer_format::float32_vec4, true,  4, {0, 0, 0, 0}};
-    case aov::depth:        return {buffer_format::float32,      false, 1, {1, 0, 0, 0}};
-    case aov::camera_depth: return {buffer_format::float32,      false, 1, {0, 0, 0, 0}};
-    case aov::normal:
-    case aov::n_eye:        return {buffer_format::float32_vec3, false, 3, {-1, -1, -1, 0}};
-    case aov::prim_id:
-    case aov::instance_id:
-    case aov::element_id:   return {buffer_format::int32, false, 1, {-1, 0, 0, 0}};
+  switch (name)
+  {
+  case aov::color: return {buffer_format::float32_vec4, true, 4, {0, 0, 0, 0}};
+  case aov::depth: return {buffer_format::float32, false, 1, {1, 0, 0, 0}};
+  case aov::camera_depth: return {buffer_format::float32, false, 1, {0, 0, 0, 0}};
+  case aov::normal:
+  case aov::n_eye: return {buffer_format::float32_vec3, false, 3, {-1, -1, -1, 0}};
+  case aov::prim_id:
+  case aov::instance_id:
+  case aov::element_id: return {buffer_format::int32, false, 1, {-1, 0, 0, 0}};
   }
   return {};
 }
@@ -354,3 +380,4 @@ inline aov_binding allocate_aov(render_buffer &buffer, aov name, int width, int 
   buffer.clear(d.clear_components, d.clear_value);
   return {name, &buffer};
 }
+

@@ -1,17 +1,19 @@
 #pragma once
 
+#include <cmath>
+
 #include "hittable.h"
 #include "ray.h"
 #include "tracer.h"
 #include "vec3.h"
-#include <cmath>
 
 class material
 {
 public:
   virtual ~material() = default;
 
-  virtual bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation, ray &r_out) const
+  virtual bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation,
+                       ray &r_out) const
   {
     return false;
   }
@@ -22,12 +24,12 @@ class lambert : public material
 public:
   lambert(color albedo) : albedo(albedo) {}
 
-  bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation, ray &r_out) const override
+  bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation,
+               ray &r_out) const override
   {
     attenuation = albedo;
     vec3 scatter_direction = info.normal + random_unit_vec3(generator);
-    if (scatter_direction.near_zero())
-      scatter_direction = info.normal;
+    if (scatter_direction.near_zero()) scatter_direction = info.normal;
     r_out = ray(info.p, scatter_direction);
 
     return true;
@@ -42,7 +44,8 @@ class metal : public material
 public:
   metal(color albedo, double fuzz) : albedo(albedo), fuzz(fuzz < 1 ? fuzz : 1) {}
 
-  bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation, ray &r_out) const override
+  bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation,
+               ray &r_out) const override
   {
     attenuation = albedo;
     vec3 reflected = reflect(r_in.direction(), info.normal);
@@ -62,7 +65,8 @@ class glass : public material
 public:
   glass(color albedo, double r) : albedo(albedo), r(r) {}
 
-  bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation, ray &r_out) const override
+  bool scatter(rng &generator, const ray &r_in, const hit_info &info, color &attenuation,
+               ray &r_out) const override
   {
     attenuation = albedo;
     double ri = info.front_face ? (1 / r) : r;
@@ -70,10 +74,13 @@ public:
     double cos_theta = std::fmin(dot(-unit_vector(r_in.direction()), info.normal), 1);
     double sin_theta = std::sqrt(1 - cos_theta * cos_theta);
     bool cannot_refract = ri * sin_theta > 1;
-    if (cannot_refract || reflectance(cos_theta, ri) > generator.uniform()) {
+    if (cannot_refract || reflectance(cos_theta, ri) > generator.uniform())
+    {
       // reflect
       r_out = ray(info.p, reflect(r_in.direction(), info.normal));
-    } else {
+    }
+    else
+    {
       // refract
       r_out = ray(info.p, refract(unit_vector(r_in.direction()), info.normal, ri));
     }
@@ -92,3 +99,4 @@ private:
     return r0 + (1 - r0) * std::pow(1 - cos, 5);
   }
 };
+

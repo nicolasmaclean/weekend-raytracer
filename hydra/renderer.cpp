@@ -1,5 +1,3 @@
-#include "renderer.h"
-
 #include <cstring>
 
 #include <pxr/base/gf/vec3f.h>
@@ -9,16 +7,18 @@
 
 #include "convert.h"
 #include "renderBuffer.h"
+#include "renderer.h"
+
 
 void HdWeekendRenderer::SetCamera(const GfMatrix4d &view, const GfMatrix4d &proj)
 {
-  _cam.set_camera(ToMat4(view), ToMat4(proj));   // computes inverses, detects ortho
+  _cam.set_camera(ToMat4(view), ToMat4(proj)); // computes inverses, detects ortho
 }
 
 void HdWeekendRenderer::SetDataWindow(const GfRect2i &w)
 {
   _dataWindow = w;
-  _cam.data_window = { w.GetMinX(), w.GetMinY(), w.GetMaxX(), w.GetMaxY() };
+  _cam.data_window = {w.GetMinX(), w.GetMinY(), w.GetMaxX(), w.GetMaxY()};
 }
 
 // The one place a HdRenderBuffer becomes a tracer render_buffer. Every buffer in
@@ -72,7 +72,7 @@ static void _ClearAov(render_buffer &buffer, aov name, const VtValue &clearValue
   const aov_descriptor d = default_aov_descriptor(name);
 
   int n = d.clear_components;
-  float v[4] = { d.clear_value[0], d.clear_value[1], d.clear_value[2], d.clear_value[3] };
+  float v[4] = {d.clear_value[0], d.clear_value[1], d.clear_value[2], d.clear_value[3]};
 
   if (clearValue.IsHolding<GfVec4f>())
   {
@@ -104,7 +104,7 @@ static void _ClearAov(render_buffer &buffer, aov name, const VtValue &clearValue
 
   if (component_of(buffer.format()) == component_type::int32)
   {
-    const int32_t iv[4] = { int32_t(v[0]), int32_t(v[1]), int32_t(v[2]), int32_t(v[3]) };
+    const int32_t iv[4] = {int32_t(v[0]), int32_t(v[1]), int32_t(v[2]), int32_t(v[3])};
     buffer.clear(n, iv);
   }
   else
@@ -147,9 +147,8 @@ void HdWeekendRenderer::Render(HdRenderThread *thread)
   // buffer. Silent otherwise, and the symptom is an all-black frame.
   if (stats.completed_samples == 0)
   {
-    TF_WARN("Weekend rendered 0 samples: %zu aov binding(s), data window (%d, %d)-(%d, %d)",
-            _aovs.size(),
-            _cam.data_window.min_x, _cam.data_window.min_y,
-            _cam.data_window.max_x, _cam.data_window.max_y);
+    TF_WARN("Weekend rendered 0 samples: %zu aov binding(s), data window (%d, %d)-(%d, %d)", _aovs.size(),
+            _cam.data_window.min_x, _cam.data_window.min_y, _cam.data_window.max_x, _cam.data_window.max_y);
   }
 }
+

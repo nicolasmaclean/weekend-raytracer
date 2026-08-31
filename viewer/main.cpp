@@ -1,7 +1,6 @@
 #include <SDL3/SDL.h>
 #include <iostream>
 #include <cstdlib>
-#include <algorithm>
 
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
@@ -16,11 +15,11 @@
 
 struct viewer_control : render_control
 {
-  std::atomic<bool> stop { false };
-  std::atomic<bool> pause { false };
+  std::atomic<bool> stop{false};
+  std::atomic<bool> pause{false};
 
-  bool is_stop_requested() const override { return stop.load(); }
-  bool is_pause_requested() const override { return pause.load(); }
+  [[nodiscard]] bool is_stop_requested() const override { return stop.load(); }
+  [[nodiscard]] bool is_pause_requested() const override { return pause.load(); }
 };
 
 bool blit_buffer_to_texture(SDL_Texture *texture, const render_buffer &buffer)
@@ -37,7 +36,7 @@ bool blit_buffer_to_texture(SDL_Texture *texture, const render_buffer &buffer)
   {
     // pitch is BYTES per row and may exceed width*4 (alignment padding),
     // so step in bytes and only then reinterpret
-    uint32_t *row = reinterpret_cast<uint32_t *>(static_cast<uint8_t *>(raw) + y * pitch);
+    auto *row = reinterpret_cast<uint32_t *>(static_cast<uint8_t *>(raw) + y * pitch);
     const int by = buffer.height() - 1 - y;
 
     // convert color to pixel directly into the render texture!
@@ -57,20 +56,22 @@ bool blit_buffer_to_texture(SDL_Texture *texture, const render_buffer &buffer)
 
 int main(int argc, char *argv[])
 {
-  if (!SDL_Init(SDL_INIT_VIDEO)) {     
+  if (!SDL_Init(SDL_INIT_VIDEO))
+  {
     std::clog << "SDL_Init: " << SDL_GetError() << "\n";
     return 1;
   }
 
   SDL_Window *window = nullptr;
   SDL_Renderer *sdl_renderer = nullptr;
-  if (!SDL_CreateWindowAndRenderer("viewer", 640, 360, SDL_WINDOW_RESIZABLE, &window, &sdl_renderer)) {
+  if (!SDL_CreateWindowAndRenderer("viewer", 640, 360, SDL_WINDOW_RESIZABLE, &window, &sdl_renderer))
+  {
     std::clog << "SDL_CreateWindowAndRenderer: " << SDL_GetError() << "\n";
     SDL_Quit();
     return 1;
   }
 
-  // prepare scene 
+  // prepare scene
   int i_scene = argc > 1 ? atoi(argv[1]) : 1;
   scene world;
   camera_desc desc;
@@ -80,16 +81,14 @@ int main(int argc, char *argv[])
   camera cam = desc.build(render_width, render_height);
   uint64_t last_version = world.version();
 
-  // prepare renderer and buffer 
+  // prepare renderer and buffer
   struct renderer r;
   r.max_bounces = 20;
   r.samples_to_converge = 10000;
   r.schedule = tbb_schedule;
 
   render_buffer buffer;
-  aov_bindings aovs = {
-    allocate_aov(buffer, aov::color, render_width, render_height)
-  };
+  aov_bindings aovs = {allocate_aov(buffer, aov::color, render_width, render_height)};
 
   // setup start, pause, and stop controls
   viewer_control control;
@@ -118,13 +117,15 @@ int main(int argc, char *argv[])
   world.set_stop_render(stop_render);
 
   // prepare render texture
-  SDL_Texture *texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, render_width, render_height);
+  SDL_Texture *texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_XRGB8888,
+                                           SDL_TEXTUREACCESS_STREAMING, render_width, render_height);
   SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-  SDL_SetRenderLogicalPresentation(sdl_renderer, render_width, render_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+  SDL_SetRenderLogicalPresentation(sdl_renderer, render_width, render_height,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
   // clear screen to gray color
   std::clog << "Opening window..." << std::endl;
-  SDL_SetRenderDrawColor(sdl_renderer, 20, 20, 20, 255);  // r, g, b, a
+  SDL_SetRenderDrawColor(sdl_renderer, 20, 20, 20, 255); // r, g, b, a
   SDL_RenderClear(sdl_renderer);
   SDL_RenderPresent(sdl_renderer);
 
@@ -136,7 +137,7 @@ int main(int argc, char *argv[])
   bool running = true;
   while (running)
   {
-    // check user input 
+    // check user input
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
@@ -146,22 +147,23 @@ int main(int argc, char *argv[])
       }
       if (event.type == SDL_EVENT_KEY_DOWN)
       {
-        switch (event.key.key) {
-          case SDLK_ESCAPE:
-          {
-            running = false;
-            break;
-          }
-          case SDLK_SPACE:
-          {
-            control.pause.store(!control.pause.load());
-            break;
-          }
-          case SDLK_R:
-          {
-            start_render();
-            break;
-          }
+        switch (event.key.key)
+        {
+        case SDLK_ESCAPE:
+        {
+          running = false;
+          break;
+        }
+        case SDLK_SPACE:
+        {
+          control.pause.store(!control.pause.load());
+          break;
+        }
+        case SDLK_R:
+        {
+          start_render();
+          break;
+        }
         }
       }
     }
@@ -183,15 +185,15 @@ int main(int argc, char *argv[])
 
     // upload render texture
     SDL_RenderClear(sdl_renderer);
-    SDL_RenderTexture(sdl_renderer, texture, nullptr, nullptr);  // src rect, dst rect
+    SDL_RenderTexture(sdl_renderer, texture, nullptr, nullptr); // src rect, dst rect
     SDL_RenderPresent(sdl_renderer);
 
     const int samples = r.completed_samples();
     if (samples != shown_samples)
     {
       shown_samples = samples;
-      std::string title = "viewer - " + std::to_string(samples) + "/" +
-                          std::to_string(r.samples_to_converge) + " samples";
+      std::string title =
+          "viewer - " + std::to_string(samples) + "/" + std::to_string(r.samples_to_converge) + " samples";
       if (control.pause.load()) title += " (paused)";
       if (buffer.is_converged()) title += " (converged)";
       SDL_SetWindowTitle(window, title.c_str());
@@ -201,14 +203,15 @@ int main(int argc, char *argv[])
   }
 
   stop_render();
-  std::clog << "Stopped after " << stats.completed_samples << " samples in " << stats.ms / 1000.0
-            << "s" << (stats.stopped ? " (interrupted)" : "") << std::endl;
+  std::clog << "Stopped after " << stats.completed_samples << " samples in " << stats.ms / 1000.0 << "s"
+            << (stats.stopped ? " (interrupted)" : "") << std::endl;
 
   std::clog << "Closing window" << std::endl;
-  SDL_DestroyTexture(texture); 
+  SDL_DestroyTexture(texture);
   SDL_DestroyRenderer(sdl_renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
 
   return 0;
 }
+

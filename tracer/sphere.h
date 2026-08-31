@@ -1,14 +1,18 @@
-#ifndef SPHERE_H
-#define SPHERE_H
+#pragma once
+
+#include <utility>
 
 #include "hittable.h"
 #include "ray.h"
+
 
 class sphere : public hittable
 {
 public:
   sphere(const point3 &center, double radius, shared_ptr<material> material)
-      : center(center), radius(radius), mat(material)
+      : center(center),
+        radius(radius),
+        mat(std::move(material))
   {
   }
 
@@ -20,17 +24,16 @@ public:
     auto c = oc.length_sqr() - radius * radius;
 
     auto discriminant = h * h - a * c;
-    if (discriminant < 0)
-      return false;
+    if (discriminant < 0) return false;
 
     auto sqrtd = std::sqrt(discriminant);
 
     // Find the nearest root that lies in the acceptable range.
     auto root = (h - sqrtd) / a;
-    if (!clipping_range.surrounds(root)) {
+    if (!clipping_range.surrounds(root))
+    {
       root = (h + sqrtd) / a;
-      if (!clipping_range.surrounds(root))
-        return false;
+      if (!clipping_range.surrounds(root)) return false;
     }
 
     info.t = root;
@@ -43,10 +46,10 @@ public:
     return true;
   }
 
-  aabb bounds() const override
+  [[nodiscard]] aabb bounds() const override
   {
     const vec3 rad(radius, radius, radius);
-    return aabb { center-rad, center+rad};
+    return aabb{center - rad, center + rad};
   }
 
 private:
@@ -55,4 +58,3 @@ private:
   shared_ptr<material> mat;
 };
 
-#endif

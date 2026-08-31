@@ -22,8 +22,8 @@ public:
     set_camera(view_matrix, proj_matrix, inverse(view_matrix), inverse(proj_matrix));
   }
 
-  void set_camera(const mat4 &view_matrix, const mat4 &proj_matrix,
-                  const mat4 &inv_view_matrix, const mat4 &inv_proj_matrix)
+  void set_camera(const mat4 &view_matrix, const mat4 &proj_matrix, const mat4 &inv_view_matrix,
+                  const mat4 &inv_proj_matrix)
   {
     view = view_matrix;
     proj = proj_matrix;
@@ -33,9 +33,9 @@ public:
     orthographic = std::round(proj.m[3][3]) == 1.0;
   }
 
-  bool is_orthographic() const { return orthographic; }
-  const mat4 &view_matrix() const { return view; }
-  const mat4 &proj_matrix() const { return proj; }
+  [[nodiscard]] bool is_orthographic() const { return orthographic; }
+  [[nodiscard]] const mat4 &view_matrix() const { return view; }
+  [[nodiscard]] const mat4 &proj_matrix() const { return proj; }
 
   ray get_ray(rng &generator, int x, int y) const
   {
@@ -69,7 +69,8 @@ public:
     // Thin lens, in view space: scatter the origin over the aperture disk at
     // z == 0 and re-aim at wherever the pinhole ray crossed the focal plane
     // (z == -focus_dist), so that plane stays sharp.
-    if (!orthographic && defocus_angle > 0) {
+    if (!orthographic && defocus_angle > 0)
+    {
       double lens_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
       vec3 focal_point = direction * (focus_dist / -direction.z());
       vec3 lens_sample = random_unit_disk(generator);
@@ -86,9 +87,8 @@ public:
     out << "\nCamera settings\n"
         << "===============\n"
         << "Projection: " << (orthographic ? "orthographic" : "perspective") << "\n"
-        << "Data window: (" << data_window.min_x << ", " << data_window.min_y << ") - ("
-        << data_window.max_x << ", " << data_window.max_y << ")  "
-        << data_window.width() << "x" << data_window.height() << "\n"
+        << "Data window: (" << data_window.min_x << ", " << data_window.min_y << ") - (" << data_window.max_x
+        << ", " << data_window.max_y << ")  " << data_window.width() << "x" << data_window.height() << "\n"
         << "Camera position: (" << inv_view.transform(point3(0, 0, 0)) << ")\n"
         << "Focus distance: " << focus_dist << "  defocus angle: " << defocus_angle << "\n"
         << "Jitter: " << (jitter ? "on" : "off") << "\n"
@@ -104,3 +104,4 @@ private:
 
   bool orthographic = false;
 };
+

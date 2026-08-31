@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "hittable.h"
 #include "interval.h"
 #include "mat4.h"
@@ -9,7 +11,7 @@
 class instance : public hittable
 {
 public:
-  instance(shared_ptr<hittable> prototype, const mat4 &object_to_world) : proto(prototype)
+  instance(shared_ptr<hittable> prototype, const mat4 &object_to_world) : proto(std::move(prototype))
   {
     set_transform(object_to_world);
   }
@@ -22,14 +24,11 @@ public:
     valid = is_finite(inv);
   }
 
-  const mat4 &object_to_world() const { return xform; }
+  [[nodiscard]] const mat4 &object_to_world() const { return xform; }
 
   int32_t instance_id = -1;
 
-  void commit() override
-  {
-    proto->commit();
-  }
+  void commit() override { proto->commit(); }
 
   bool hit(const ray &r, interval clipping_range, hit_info &info) const override
   {
@@ -47,7 +46,7 @@ public:
     return true;
   }
 
-  aabb bounds() const override
+  [[nodiscard]] aabb bounds() const override
   {
     if (!valid) return aabb::empty();
 
@@ -57,8 +56,7 @@ public:
     aabb world = aabb::empty();
     for (int i = 0; i < 8; i++)
     {
-      const point3 corner(i & 1 ? local.hi[0] : local.lo[0],
-                          i & 2 ? local.hi[1] : local.lo[1],
+      const point3 corner(i & 1 ? local.hi[0] : local.lo[0], i & 2 ? local.hi[1] : local.lo[1],
                           i & 4 ? local.hi[2] : local.lo[2]);
       world.expand(xform.transform(corner));
     }
@@ -73,3 +71,4 @@ private:
   mat4 inv_t = mat4::identity();
   bool valid = true;
 };
+

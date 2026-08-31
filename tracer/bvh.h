@@ -30,7 +30,7 @@ public:
   // Refit the tree untill cost exceds the original by this much
   static constexpr double rebuild_ratio = 1.3;
 
-  // Stop subdividing at or below `leaf_size` and never emit a leaf larger 
+  // Stop subdividing at or below `leaf_size` and never emit a leaf larger
   // than `max_leaf` even when the SAH asks for one.
   int leaf_size = 1;
   int max_leaf = 16;
@@ -39,9 +39,9 @@ public:
   struct node
   {
     aabb box;
-    int32_t left_first = 0;  // index of the left child
-    int32_t count = 0;       // 0 == interior node
-    int32_t axis = 0;        
+    int32_t left_first = 0; // index of the left child
+    int32_t count = 0;      // 0 == interior node
+    int32_t axis = 0;
   };
 
   void build(const std::vector<aabb> &boxes)
@@ -109,24 +109,21 @@ public:
     return _cost;
   }
 
-  bool empty() const { return _nodes.empty(); }
-  size_t node_count() const { return _nodes.size(); }
-  int depth() const { return _depth; }
-  const std::vector<int32_t> &order() const { return _order; }
-  const std::vector<node> &nodes() const { return _nodes; }
+  [[nodiscard]] bool empty() const { return _nodes.empty(); }
+  [[nodiscard]] size_t node_count() const { return _nodes.size(); }
+  [[nodiscard]] int depth() const { return _depth; }
+  [[nodiscard]] const std::vector<int32_t> &order() const { return _order; }
+  [[nodiscard]] const std::vector<node> &nodes() const { return _nodes; }
 
-  aabb bounds() const
-  {
-    return _nodes.empty() ? aabb::empty() : _nodes[0].box;
-  }
+  [[nodiscard]] aabb bounds() const { return _nodes.empty() ? aabb::empty() : _nodes[0].box; }
 
-  double built_cost() const { return _built_cost; }
-  double cost() const { return _cost; }
-  bool degraded() const { return _built_cost > 0 && _cost > rebuild_ratio * _built_cost; }
+  [[nodiscard]] double built_cost() const { return _built_cost; }
+  [[nodiscard]] double cost() const { return _cost; }
+  [[nodiscard]] bool degraded() const { return _built_cost > 0 && _cost > rebuild_ratio * _built_cost; }
 
   // Surface area heuristic to compare bvh effectiveness, best statistic to use
   // other than a stopwatch and some testing
-  double sah_cost() const
+  [[nodiscard]] double sah_cost() const
   {
     if (_nodes.empty()) return 0;
 
@@ -145,8 +142,7 @@ public:
 
   // leaf(first, count, clip, info) -> true if there is a hit closer than clip.max.
   // if leaf returns true, it also needs to set `info.t`
-  template <class LeafFn>
-  bool hit(const ray &r, interval clip, hit_info &info, LeafFn leaf) const
+  template <class LeafFn> bool hit(const ray &r, interval clip, hit_info &info, LeafFn leaf) const
   {
     if (_nodes.empty()) return false;
 
@@ -180,7 +176,7 @@ public:
       }
       else
       {
-        // Use near child first because it's more likely to allow discarding 
+        // Use near child first because it's more likely to allow discarding
         // 2nd box test
         int32_t a = nd.left_first;
         int32_t b = nd.left_first + 1;
@@ -257,7 +253,7 @@ private:
 
       if (t0 > tmin) tmin = t0;
       if (t1 < tmax) tmax = t1;
-      if (tmax < tmin) return false;   // strictly less-than: see slab_hit
+      if (tmax < tmin) return false; // strictly less-than: see slab_hit
     }
 
     enter = tmin;
@@ -271,22 +267,20 @@ private:
   }
 
   // Split the range at its centroid median on `axis`.
-  // Fallback for when SAH has nothing to say: coincident centroids, 
+  // Fallback for when SAH has nothing to say: coincident centroids,
   // zero-area geometry, or a partition that came back empty on one side.
   void median_split(int32_t index, int32_t first, int32_t count, int axis, int depth)
   {
     const auto begin = _refs.begin() + first;
     const int32_t left_n = count / 2;
-    std::nth_element(begin, begin + left_n, begin + count,
-                     [&](const prim_ref &a, const prim_ref &b) {
-                       return a.centroid[axis] < b.centroid[axis];
-                     });
+    std::nth_element(begin, begin + left_n, begin + count, [&](const prim_ref &a, const prim_ref &b)
+                     { return a.centroid[axis] < b.centroid[axis]; });
     split_children(index, first, count, left_n, axis, depth);
   }
 
   void split_children(int32_t index, int32_t first, int32_t count, int32_t left_n, int axis, int depth)
   {
-    const int32_t left = int32_t(_nodes.size());
+    const auto left = int32_t(_nodes.size());
     _nodes.emplace_back();
     _nodes.emplace_back();
 
@@ -346,7 +340,8 @@ private:
     // allocations here are three per node: measured at 487 prims, that alone
     // was two thirds of the build.
     bin bins[max_bins];
-    for (int i = 0; i < bin_count; i++) bins[i] = bin();
+    for (int i = 0; i < bin_count; i++)
+      bins[i] = bin();
 
     const double lo = centroids.lo[axis];
     const double scale = bin_count / ext[axis];
@@ -392,7 +387,7 @@ private:
         if (c < best_cost)
         {
           best_cost = c;
-          best_bin = i - 1;     // the left side is bins [0, best_bin]
+          best_bin = i - 1; // the left side is bins [0, best_bin]
         }
       }
     }
@@ -410,13 +405,15 @@ private:
     // --- partition ---------------------------------------------------------
     const auto begin = _refs.begin() + first;
     const auto end = begin + count;
-    const auto mid = std::partition(begin, end, [&](const prim_ref &p) {
-      int b = int((p.centroid[axis] - lo) * scale);
-      b = std::min(std::max(b, 0), bin_count - 1);
-      return b <= best_bin;
-    });
+    const auto mid = std::partition(begin, end,
+                                    [&](const prim_ref &p)
+                                    {
+                                      int b = int((p.centroid[axis] - lo) * scale);
+                                      b = std::min(std::max(b, 0), bin_count - 1);
+                                      return b <= best_bin;
+                                    });
 
-    const int32_t left_n = int32_t(mid - begin);
+    const auto left_n = int32_t(mid - begin);
     if (left_n == 0 || left_n == count)
     {
       // The bin the SAH chose and the bin std::partition computed disagreed,
@@ -429,3 +426,4 @@ private:
     split_children(index, first, count, left_n, axis, depth);
   }
 };
+

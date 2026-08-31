@@ -1,49 +1,45 @@
-//
 // Copyright 2020 Pixar
 //
 // Licensed under the terms set forth in the LICENSE.txt file available at
 // https://openusd.org/license.
-//
-#include "rendererPlugin.h"
-#include "renderDelegate.h"
 
 #include "pxr/imaging/hd/rendererPluginRegistry.h"
 
+#include "rendererPlugin.h"
+#include "renderDelegate.h"
+
+
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 // Register the plugin with the renderer plugin system.
 TF_REGISTRY_FUNCTION(TfType)
 {
-    HdRendererPluginRegistry::Define<HdWeekendRendererPlugin>();
+  HdRendererPluginRegistry::Define<HdWeekendRendererPlugin>();
 }
 
-HdRenderDelegate*
-HdWeekendRendererPlugin::CreateRenderDelegate()
+HdRenderDelegate *HdWeekendRendererPlugin::CreateRenderDelegate()
 {
-    return new HdWeekendRenderDelegate();
+  return new HdWeekendRenderDelegate();
 }
 
-HdRenderDelegate*
-HdWeekendRendererPlugin::CreateRenderDelegate(
-    HdRenderSettingsMap const& settingsMap)
+HdRenderDelegate *HdWeekendRendererPlugin::CreateRenderDelegate(HdRenderSettingsMap const &settingsMap)
 {
-    return new HdWeekendRenderDelegate(settingsMap);
+  return new HdWeekendRenderDelegate(settingsMap);
 }
 
-void
-HdWeekendRendererPlugin::DeleteRenderDelegate(HdRenderDelegate *renderDelegate)
+void HdWeekendRendererPlugin::DeleteRenderDelegate(HdRenderDelegate *renderDelegate)
 {
-    delete renderDelegate;
+  delete renderDelegate;
 }
 
-bool 
-HdWeekendRendererPlugin::IsSupported(
-    HdRendererCreateArgs const & /*rendererCreateArgs*/,
-    std::string * /* reasonWhyNot */) const
+bool HdWeekendRendererPlugin::IsSupported(HdRendererCreateArgs const & /*rendererCreateArgs*/,
+                                          std::string * /* reasonWhyNot */) const
 {
-    // Nothing more to check for now, we assume if the plugin loads correctly
-    // it is supported.
-    return true;
+  // Nothing more to check for now, we assume if the plugin loads correctly
+  // it is supported.
+  return true;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
+

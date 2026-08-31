@@ -10,18 +10,16 @@ public:
   constexpr interval() : min(-infinity), max(infinity) {}
   constexpr interval(double min, double max) : min(min), max(max) {}
 
-  double size() { return max - min; }
+  [[nodiscard]] double size() const { return max - min; }
 
-  double contains(double t) { return min <= t && t <= max; }
+  [[nodiscard]] bool contains(double t) const { return min <= t && t <= max; }
 
-  double surrounds(double t) { return min < t && t < max; }
+  [[nodiscard]] bool surrounds(double t) const { return min < t && t < max; }
 
-  double clamp(double t) const
+  [[nodiscard]] double clamp(double t) const
   {
-    if (t > max)
-      return max;
-    if (t < min)
-      return min;
+    if (t > max) return max;
+    if (t < min) return min;
     return t;
   }
 

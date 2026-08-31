@@ -17,14 +17,14 @@ struct obj_load_result
 {
   std::vector<shared_ptr<mesh>> meshes;
   std::string warning;
-  std::string error;             // non-empty means nothing was loaded
-  size_t degenerate_faces = 0;   // authored faces with fewer than 3 corners
+  std::string error;           // non-empty means nothing was loaded
+  size_t degenerate_faces = 0; // authored faces with fewer than 3 corners
 };
 
 // One `mesh` per OBJ shape (`o`/`g`), because one mesh has one material and one
 // Rprim has one material binding. Materials themselves are the caller's
 // business: .mtl is out of scope, see the plan's "What is explicitly NOT".
-inline obj_load_result load_obj(const std::string &path, shared_ptr<material> mat)
+inline obj_load_result load_obj(const std::string &path, const shared_ptr<material> &mat)
 {
   obj_load_result out;
 
@@ -34,7 +34,7 @@ inline obj_load_result load_obj(const std::string &path, shared_ptr<material> ma
   cfg.triangulate = false;
   cfg.vertex_color = false;
 
-  // read obj file 
+  // read obj file
   tinyobj::ObjReader reader;
   const bool ok = reader.ParseFromFile(path, cfg);
   out.warning = reader.Warning();
@@ -55,27 +55,28 @@ inline obj_load_result load_obj(const std::string &path, shared_ptr<material> ma
     std::map<std::pair<int, int>, int32_t> remap;
     bool have_normals = true;
 
-    auto corner_vertex = [&](const tinyobj::index_t &idx) {
+    auto corner_vertex = [&](const tinyobj::index_t &idx)
+    {
       const auto key = std::make_pair(idx.vertex_index, idx.normal_index);
       auto it = remap.find(key);
       if (it != remap.end()) return it->second;
 
       m->verts.emplace_back(attrib.vertices[3 * idx.vertex_index + 0],
-                        attrib.vertices[3 * idx.vertex_index + 1],
-                        attrib.vertices[3 * idx.vertex_index + 2]);
+                            attrib.vertices[3 * idx.vertex_index + 1],
+                            attrib.vertices[3 * idx.vertex_index + 2]);
 
       if (idx.normal_index >= 0)
       {
         m->normals.emplace_back(attrib.normals[3 * idx.normal_index + 0],
-                          attrib.normals[3 * idx.normal_index + 1],
-                          attrib.normals[3 * idx.normal_index + 2]);
+                                attrib.normals[3 * idx.normal_index + 1],
+                                attrib.normals[3 * idx.normal_index + 2]);
       }
       else
       {
         have_normals = false;
       }
 
-      const int32_t id = int32_t(m->verts.size() - 1);
+      const auto id = int32_t(m->verts.size() - 1);
       remap.emplace(key, id);
       return id;
     };

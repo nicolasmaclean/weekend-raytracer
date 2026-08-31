@@ -1,0 +1,7 @@
+# hydra/ is a SEPARATE CMake project from the root one (it must not link the `tracer`
+# target: that would put vendored oneTBB 2023.1 and USD's TBB 2020.3 in one project,
+# a hard configure error). So it has its own build tree and its own compile database.
+# clangd auto-discovers a `build/` subdir but never `build-hydra/`, and the root
+# .clangd points at `build`, which knows nothing about USD - hence this override.
+CompileFlags:
+  CompilationDatabase: ../build-hydra

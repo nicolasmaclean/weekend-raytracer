@@ -7,8 +7,8 @@ class interval
 public:
   double min, max;
 
-  interval() : min(-infinity), max(infinity) {}
-  interval(double min, double max) : min(min), max(max) {}
+  constexpr interval() : min(-infinity), max(infinity) {}
+  constexpr interval(double min, double max) : min(min), max(max) {}
 
   double size() { return max - min; }
 
@@ -28,5 +28,6 @@ public:
   static const interval empty, universe;
 };
 
-const interval interval::empty = interval(infinity, -infinity);
-const interval interval::universe = interval(-infinity, infinity);
+// must be constexpr so they are defined once per program, not per translation unit
+constexpr interval interval::empty = interval(infinity, -infinity);
+constexpr interval interval::universe = interval(-infinity, infinity);

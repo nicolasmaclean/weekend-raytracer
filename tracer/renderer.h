@@ -282,9 +282,13 @@ private:
 
   bool validate(const camera &cam, const aov_bindings &aovs)
   {
-    // validate expected buffers are setup
+    if (aovs.empty())
+    {
+      return false;
+    }
+
     render_buffer *buffer = aovs[0].buffer;
-    if (aovs.empty() || buffer == nullptr)
+    if (buffer == nullptr)
     {
       return false;
     }

@@ -6,14 +6,15 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/renderDelegate.h"
 #include "pxr/imaging/hd/renderThread.h"
 #include "pxr/imaging/hd/resourceRegistry.h"
-#include "pxr/base/tf/staticTokens.h"
 
 #include "renderer.h"
+#include "renderParam.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -86,6 +87,11 @@ private:
   // Bumped by HdWeekendRenderParam on every scene edit (stage B). Starts at 1
   // so the pass's _lastSceneVersion of 0 forces a first render.
   std::atomic<int> _sceneVersion{1};
+
+  // The only route a prim has to the scene (§6). Constructed in _Initialize(),
+  // after the three members it points at; handed out by GetRenderParam() and
+  // owned for the delegate's whole lifetime, since prims hold the raw pointer.
+  std::unique_ptr<HdWeekendRenderParam> _renderParam;
 
   // This class does not support copying.
   HdWeekendRenderDelegate(const HdWeekendRenderDelegate &) = delete;

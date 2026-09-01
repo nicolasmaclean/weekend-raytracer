@@ -47,6 +47,9 @@ void HdWeekendRenderDelegate::_Initialize()
 {
   std::cout << "Creating Weekend RenderDelegate" << std::endl;
   _resourceRegistry = std::make_shared<HdResourceRegistry>();
+  _renderer.Scene().set_stop_render([this]() { _renderThread.StopRender(); });
+
+  _renderParam = std::make_unique<HdWeekendRenderParam>(&_renderer.Scene(), &_renderThread, &_sceneVersion);
 }
 
 HdWeekendRenderDelegate::~HdWeekendRenderDelegate()
@@ -179,7 +182,7 @@ void HdWeekendRenderDelegate::DestroyInstancer(HdInstancer *instancer)
 
 HdRenderParam *HdWeekendRenderDelegate::GetRenderParam() const
 {
-  return nullptr;
+  return _renderParam.get();
 }
 
 // The clear value's type has to match the format, or the host's clear is a no-op.

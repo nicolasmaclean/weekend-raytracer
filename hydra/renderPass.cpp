@@ -166,10 +166,6 @@ void HdWeekendRenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassS
       aovBindings.push_back(depthAov);
     }
     _renderer->SetAovBindings(aovBindings);
-
-    // Stage C's render thread clears; make sure it happens at least once on
-    // this thread first.
-    _renderer->Clear();
     needStartRender = true;
   }
 
@@ -179,6 +175,17 @@ void HdWeekendRenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassS
   {
     _converged = false;
     _renderer->MarkAovBuffersUnconverged();
+
+    // Every restart begins a NEW accumulation, so the old samples have to go.
+    // `color` is multisampled: render_buffer::resolve() divides the running sum
+    // by the running count, so a buffer that is not cleared here shows the
+    // average of every camera position visited - the previous frames linger as
+    // ghosts. It also strands the single-sampled AOVs: render_tiles() only
+    // writes them when the sample count is 0, so `depth` would freeze after the
+    // first frame. hdEmbree gets this from its render thread callback
+    // (`Clear(); Render();` - renderDelegate.cpp:85); stage C moves the pair
+    // there and this line goes with it.
+    _renderer->Clear();
 
     // Blocking. Becomes _renderThread->StartRender() in stage C, at which
     // point _converged stops being set here and starts being read from the

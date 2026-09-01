@@ -5,10 +5,18 @@
 
 #pragma once
 
-#include "pxr/pxr.h"
-#include "pxr/imaging/hd/mesh.h"
+#include <pxr/pxr.h>
+#include <pxr/imaging/hd/mesh.h>
+#include <pxr/base/vt/types.h>
+#include <pxr/imaging/hd/meshTopology.h>
+#include <pxr/base/gf/matrix4d.h>
+
+#include "tracer/instance.h"
+#include "tracer/mesh.h"
+#include "tracer/scene.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 class HdWeekendMesh final : public HdMesh
 {
@@ -32,6 +40,8 @@ public:
   void Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderParam, HdDirtyBits *dirtyBits,
             TfToken const &reprToken) override;
 
+  void Finalize(HdRenderParam *renderParam) override;
+
 protected:
   // Init representation of this Rprim. Called before sync, the first time
   // the repr is used,
@@ -49,6 +59,15 @@ protected:
   // This class does not support copying.
   HdWeekendMesh(const HdWeekendMesh &) = delete;
   HdWeekendMesh &operator=(const HdWeekendMesh &) = delete;
+
+private:
+  VtVec3fArray _points;
+  HdMeshTopology _topology;
+  GfMatrix4d _transform{1.0};
+
+  shared_ptr<mesh> _mesh;
+  shared_ptr<instance> _instance;
+  prim_handle _handle = null_prim;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

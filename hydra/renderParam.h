@@ -18,6 +18,16 @@ public:
   {
   }
 
+  // Stop the render thread without touching the scene. Render buffers are not
+  // scene data, so they must not bump _sceneVersion - but they DO need the
+  // render stopped before they are resized or destroyed, because the tracer
+  // writes into their memory directly from the render thread.
+  //
+  // StopRender() blocks until the in-flight callback returns: _RenderLoop holds
+  // _requestedStateMutex across _renderCallback(), and StopRender() has to take
+  // that same mutex. So on return the render thread is provably not writing.
+  void StopRender() { _renderThread->StopRender(); }
+
   scene_edit AcquireSceneForEdit()
   {
     (*_sceneVersion)++;    // the int the render pass diffs against

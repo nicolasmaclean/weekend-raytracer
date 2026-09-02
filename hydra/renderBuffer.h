@@ -9,6 +9,8 @@
 
 #include "tracer/render_buffer.h"
 
+#include "renderParam.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -48,6 +50,26 @@ public:
 
   // The renderer writes through this, not through HdRenderBuffer.
   render_buffer &Buffer() { return _buf; }
+
+  // The render thread writes into _buf's memory directly, so both of the points
+  // where that memory can move or vanish have to stop it first. Without these
+  // the teardown at the end of a render segfaults inside render_buffer::write,
+  // on a buffer the render index has already destroyed.
+  void Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderParam, HdDirtyBits *dirtyBits) override
+  {
+    if (*dirtyBits & DirtyDescription)
+    {
+      // A description change means Allocate() is about to resize _buf.
+      static_cast<HdWeekendRenderParam *>(renderParam)->StopRender();
+    }
+    HdRenderBuffer::Sync(sceneDelegate, renderParam, dirtyBits);
+  }
+
+  void Finalize(HdRenderParam *renderParam) override
+  {
+    static_cast<HdWeekendRenderParam *>(renderParam)->StopRender();
+    HdRenderBuffer::Finalize(renderParam);
+  }
 
 protected:
   void _Deallocate() override { _buf.deallocate(); }

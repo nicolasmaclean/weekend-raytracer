@@ -1,14 +1,33 @@
 #include <cstring>
 
+#include <functional>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
 #include <pxr/base/vt/value.h>
 #include <pxr/imaging/hd/tokens.h>
+#include <pxr/base/work/loops.h>
 
+#include "config.h"
 #include "convert.h"
 #include "renderBuffer.h"
 #include "renderer.h"
 
+
+HdWeekendRenderer::HdWeekendRenderer()
+{
+  _renderer.schedule = [](size_t n, const std::function<void(size_t, size_t)> &work)
+  { WorkParallelForN(n, [&work](size_t b, size_t e) { work(b, e); }); };
+  // Only the state before the render pass's first settings poll, which happens
+  // on the very first _Execute (the delegate's settings version starts at 1,
+  // the pass's cached copy at 0). Seeded from config so it is never a different
+  // number from the one the panel opens on.
+  const HdWeekendConfig &config = HdWeekendConfig::GetInstance();
+  SetSamplesToConvergence(config.samplesToConvergence);
+  SetMaxBounces(config.maxBounces);
+  SetRandomNumberSeed(config.randomNumberSeed);
+  SetTileSize(config.tileSize);
+  SetJitterCamera(config.jitterCamera);
+}
 
 void HdWeekendRenderer::SetCamera(const GfMatrix4d &view, const GfMatrix4d &proj)
 {
@@ -136,11 +155,10 @@ void HdWeekendRenderer::Clear()
 
 void HdWeekendRenderer::Render(HdRenderThread *thread)
 {
-  // Stage C wraps `thread` in a render_control adapter. Until then the tracer
-  // runs uninterruptible, which is why stage A is verified with usdrecord.
-  (void)thread;
+  hd_render_control control;
+  control.thread = thread;
 
-  const render_stats stats = _renderer.render(_cam, _scene, _aovs, nullptr);
+  const render_stats stats = _renderer.render(_cam, _scene, _aovs, thread ? &control : nullptr);
 
   // renderer::render() returns an empty render_stats when validate() rejects the
   // state - empty bindings, mismatched buffer sizes, or a data window outside the

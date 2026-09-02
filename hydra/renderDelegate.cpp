@@ -8,10 +8,12 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
+#include <pxr/base/vt/dictionary.h>
 #include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/hd/tokens.h>
 
 #include "renderDelegate.h"
+#include "config.h"
 #include "convert.h"
 #include "mesh.h"
 #include "renderBuffer.h"
@@ -47,15 +49,59 @@ void HdWeekendRenderDelegate::_Initialize()
 {
   std::cout << "Creating Weekend RenderDelegate" << std::endl;
   _resourceRegistry = std::make_shared<HdResourceRegistry>();
+
+  // §15 mechanism 2. The VtValue's *type* picks the widget in usdview's
+  // settings panel, so an int here and a float there is the difference between
+  // a spinbox and a slider - and a type mismatch against the GetRenderSetting<T>
+  // in the render pass silently yields the fallback instead.
+  const HdWeekendConfig &config = HdWeekendConfig::GetInstance();
+  _settingDescriptors = {
+      {"Samples to convergence", HdRenderSettingsTokens->convergedSamplesPerPixel,
+       VtValue(config.samplesToConvergence)},
+      {"Thread limit", HdRenderSettingsTokens->threadLimit, VtValue(HdWeekendDefaultThreadLimit)},
+      {"Max bounces", HdWeekendRenderSettingsTokens->maxBounces, VtValue(config.maxBounces)},
+      {"Random number seed", HdWeekendRenderSettingsTokens->randomNumberSeed,
+       VtValue(config.randomNumberSeed)},
+      {"Tile size", HdWeekendRenderSettingsTokens->tileSize, VtValue(config.tileSize)},
+      {"Jitter camera", HdWeekendRenderSettingsTokens->jitterCamera, VtValue(config.jitterCamera)},
+  };
+
+  // Fills in any of the above the host did not already pass us in its
+  // HdRenderSettingsMap - it never overwrites what the host asked for.
+  _PopulateDefaultSettings(_settingDescriptors);
   _renderer.Scene().set_stop_render([this]() { _renderThread.StopRender(); });
 
   _renderParam = std::make_unique<HdWeekendRenderParam>(&_renderer.Scene(), &_renderThread, &_sceneVersion);
+
+  _renderThread.SetRenderCallback(
+      [this]()
+      {
+        _renderer.Clear();
+        _renderer.Render(&_renderThread);
+      });
+  _renderThread.StartThread();
 }
 
 HdWeekendRenderDelegate::~HdWeekendRenderDelegate()
 {
+  // Join before _renderer and _renderParam die under the running callback.
+  // ~HdRenderThread would do this too, but only after this body has run.
+  _renderThread.StopThread();
+
   _resourceRegistry.reset();
   std::cout << "Destroying Weekend RenderDelegate" << std::endl;
+}
+
+HdRenderSettingDescriptorList HdWeekendRenderDelegate::GetRenderSettingDescriptors() const
+{
+  return _settingDescriptors;
+}
+
+VtDictionary HdWeekendRenderDelegate::GetRenderStats() const
+{
+  VtDictionary stats;
+  stats[HdPerfTokens->numCompletedSamples.GetString()] = _renderer.CompletedSamples();
+  return stats;
 }
 
 TfTokenVector const &HdWeekendRenderDelegate::GetSupportedRprimTypes() const

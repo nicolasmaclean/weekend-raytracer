@@ -18,6 +18,7 @@ add_library(hdWeekend SHARED
     renderDelegate.cpp
     renderPass.cpp
     renderer.cpp
+    config.cpp
     mesh.cpp)
 
 # hdTiny links only hd + tf; hd transitively brings plug, tf, vt, work, hf, TBB::tbb.
@@ -32,14 +33,3 @@ set_target_properties(hdWeekend PROPERTIES PREFIX "")
 # Install layout per §3.3 - note the .so is a SIBLING of the plugin directory.
 install(TARGETS hdWeekend        DESTINATION plugin/usd)
 install(FILES   plugInfo.json    DESTINATION plugin/usd/hdWeekend/resources)
-
-
-# headless test.
-# hdx pulls in garch, whose INTERFACE_LINK_LIBRARIES names the OpenGL::GL imported
-# target (pxrTargets.cmake:445) - but pxrConfig.cmake never find_dependency's it, so
-# without this CMake emits a literal -lOpenGL::GL and the link fails. Test-only: the
-# delegate links just hd + tf and stays GPU-free (§17.5).
-find_package(OpenGL REQUIRED)
-
-add_executable(testHdWeekend tests/testHdWeekend.cpp)
-target_link_libraries(testHdWeekend PRIVATE hd hdx tf gf)

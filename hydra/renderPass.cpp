@@ -7,7 +7,10 @@
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/tokens.h"
 
+#include "pxr/base/work/threadLimits.h"
+
 #include "renderPass.h"
+#include "config.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -88,8 +91,11 @@ void HdWeekendRenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassS
     needStartRender = true;
   }
 
-  // 2. the render settings. Stage C re-reads the whole descriptor map here;
-  //    for now the only one that matters is how many samples count as done.
+  // 2. the render settings. Settings are polled, not pushed (§9): the delegate
+  //    bumps one version for the whole map, so there is no way to tell which
+  //    setting moved and every one is re-read. The fallbacks are the config
+  //    singleton's, which is what makes an env var the starting value and the
+  //    settings panel an override of it.
   HdRenderDelegate *renderDelegate = GetRenderIndex()->GetRenderDelegate();
   const int currentSettingsVersion = renderDelegate->GetRenderSettingsVersion();
   if (_lastSettingsVersion != currentSettingsVersion)
@@ -97,9 +103,25 @@ void HdWeekendRenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassS
     _renderThread->StopRender();
     _lastSettingsVersion = currentSettingsVersion;
 
-    // Stage A renders synchronously inside _Execute, so this has to stay at
-    // 1: a multi-thousand-sample blocking render would hang the host.
-    _renderer->SetSamplesToConvergence(1);
+    const HdWeekendConfig &config = HdWeekendConfig::GetInstance();
+
+    _renderer->SetSamplesToConvergence(renderDelegate->GetRenderSetting<int>(
+        HdRenderSettingsTokens->convergedSamplesPerPixel, config.samplesToConvergence));
+    _renderer->SetMaxBounces(
+        renderDelegate->GetRenderSetting<int>(HdWeekendRenderSettingsTokens->maxBounces, config.maxBounces));
+    _renderer->SetRandomNumberSeed(renderDelegate->GetRenderSetting<int>(
+        HdWeekendRenderSettingsTokens->randomNumberSeed, config.randomNumberSeed));
+    _renderer->SetTileSize(
+        renderDelegate->GetRenderSetting<int>(HdWeekendRenderSettingsTokens->tileSize, config.tileSize));
+    _renderer->SetJitterCamera(renderDelegate->GetRenderSetting<bool>(
+        HdWeekendRenderSettingsTokens->jitterCamera, config.jitterCamera));
+
+    // 0 means "all cores", negative means "all but n" - WorkSetConcurrencyLimit
+    // itself takes an unsigned and would read either as an enormous count, so
+    // this must go through the ...Argument overload. Deliberately has no
+    // HDWEEKEND_ env var: Work already reads PXR_WORK_THREAD_LIMIT.
+    WorkSetConcurrencyLimitArgument(renderDelegate->GetRenderSetting<int>(
+        HdRenderSettingsTokens->threadLimit, HdWeekendDefaultThreadLimit));
 
     needStartRender = true;
   }
@@ -175,23 +197,7 @@ void HdWeekendRenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassS
   {
     _converged = false;
     _renderer->MarkAovBuffersUnconverged();
-
-    // Every restart begins a NEW accumulation, so the old samples have to go.
-    // `color` is multisampled: render_buffer::resolve() divides the running sum
-    // by the running count, so a buffer that is not cleared here shows the
-    // average of every camera position visited - the previous frames linger as
-    // ghosts. It also strands the single-sampled AOVs: render_tiles() only
-    // writes them when the sample count is 0, so `depth` would freeze after the
-    // first frame. hdEmbree gets this from its render thread callback
-    // (`Clear(); Render();` - renderDelegate.cpp:85); stage C moves the pair
-    // there and this line goes with it.
-    _renderer->Clear();
-
-    // Blocking. Becomes _renderThread->StartRender() in stage C, at which
-    // point _converged stops being set here and starts being read from the
-    // thread's own progress.
-    _renderer->Render(nullptr);
-    _converged = true;
+    _renderThread->StartRender();
   }
 }
 

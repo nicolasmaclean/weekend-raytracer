@@ -66,6 +66,34 @@ public:
 
   HdAovDescriptor GetDefaultAovDescriptor(TfToken const &name) const override;
 
+  VtDictionary GetRenderStats() const override;
+
+  // The settings usdview's panel offers, and their starting values. Built once
+  // in _Initialize() from HdWeekendConfig, so an env var set before launch is
+  // what the panel opens on.
+  HdRenderSettingDescriptorList GetRenderSettingDescriptors() const override;
+
+  bool IsPauseSupported() const override { return true; }
+  bool IsStopSupported() const override { return true; }
+
+  bool Pause() override
+  {
+    _renderThread.PauseRender();
+    return true;
+  }
+
+  bool Resume() override
+  {
+    _renderThread.ResumeRender();
+    return true;
+  }
+
+  bool Stop(bool blocking) override
+  {
+    _renderThread.StopRender();
+    return true;
+  }
+
 private:
   static const TfTokenVector SUPPORTED_RPRIM_TYPES;
   static const TfTokenVector SUPPORTED_SPRIM_TYPES;
@@ -74,6 +102,8 @@ private:
   void _Initialize();
 
   HdResourceRegistrySharedPtr _resourceRegistry;
+
+  HdRenderSettingDescriptorList _settingDescriptors;
 
   // The renderer is delegate-scoped: it holds the scene and the camera across
   // _Execute calls so the pass has something to diff against. Every pass this

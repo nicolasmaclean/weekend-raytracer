@@ -314,9 +314,37 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 Notes that matter:
 
-- **Do not override `Sync()`.** The base `HdRenderBuffer::Sync` already pulls
-  `HdRenderBufferDescriptor` from the scene delegate and calls your `Allocate`
-  (`hd/renderBuffer.cpp`), then clears `AllDirty`. Free correctness.
+- **Do not reimplement `Sync()` — but from stage C you must wrap it.** The base
+  `HdRenderBuffer::Sync` already pulls `HdRenderBufferDescriptor` from the scene delegate and calls
+  your `Allocate` (`hd/renderBuffer.cpp`), then clears `AllDirty`. Free correctness, and it stays
+  free: never replace that body, always delegate to it. What the base cannot know is that *we* hand
+  the render thread a raw `render_buffer*` and let it write into that memory directly (see A3.3's
+  `_TracerBuffer`). So both points where the memory can move or vanish have to stop the render
+  first, exactly as hdEmbree does (`hdEmbree/renderBuffer.cpp`):
+
+  ```cpp
+  void Sync(HdSceneDelegate *sd, HdRenderParam *rp, HdDirtyBits *dirtyBits) override
+  {
+      // A description change means Allocate() is about to resize _buf.
+      if (*dirtyBits & DirtyDescription) {
+          static_cast<HdWeekendRenderParam *>(rp)->StopRender();
+      }
+      HdRenderBuffer::Sync(sd, rp, dirtyBits);
+  }
+  void Finalize(HdRenderParam *rp) override
+  {
+      static_cast<HdWeekendRenderParam *>(rp)->StopRender();
+      HdRenderBuffer::Finalize(rp);
+  }
+  ```
+
+  Write these in **step A1**, even though nothing is threaded until C1 — in stages A and B they are
+  dead code, and by stage C the symptom is a SIGSEGV at teardown inside `render_buffer::write`, on a
+  buffer the render index has already destroyed. Nothing in that stack points back at Hydra.
+
+  Note it is `StopRender()`, not `AcquireSceneForEdit()` — render buffers are not scene data and
+  must not bump `_sceneVersion`. That is the second method `HdWeekendRenderParam` exists to provide,
+  and what its otherwise-unused `_renderThread` member is for (§6).
 - **Do not implement `GetResource()`.** Returning the base class's empty `VtValue` is what makes
   `HdxAovInputTask` fall back to `Map()` and upload the CPU pixels into an `HgiTexture` itself
   (§17.2). That is how a GPU-free delegate gets viewport presentation and picking.
@@ -626,6 +654,11 @@ if (needStartRender) {
 Set `renderer::samples_to_converge = 1` for now. A blocking multi-thousand-sample render inside
 `_Execute` will hang `usdview` (§17.7) — that is what stage C fixes, and it is why stage A is
 verified with `usdrecord`, not `usdview`.
+
+**Delete this line in step C4**, when branch 2 starts reading `convergedSamplesPerPixel`. Left in,
+it silently pins the image to one sample: the render thread runs, the HUD counter reaches 1 and
+stops, and the viewport looks static — which reads exactly like "the thread never started" and
+sends you debugging the wrong thing.
 
 ## Step A5 — Wire the renderer into the delegate
 
@@ -1111,6 +1144,17 @@ Semantics that matter (§10.1): `StopRender()` is threadsafe and callable from a
 **`StartRender()` is not — call it only from the render pass.** The design intent is that a static
 scene is never interrupted: you stop the render only when a prim is about to be edited.
 
+**`StopRender()` also blocks until the in-flight callback returns**, which the name does not
+suggest and §10.1 does not spell out. `_RenderLoop` holds `_requestedStateMutex` across the whole
+`_renderCallback()`, and `StopRender()` has to take that same mutex — so it first clears
+`_enableRender` (making `IsStopRequested()` true, so the tracer bails at its next tile boundary),
+then waits. On return the render thread is *provably* not writing.
+
+That property is the entire basis for the "stop, then mutate" pattern used by `scene_edit`, by the
+pass destructor, and by the render buffer's `Sync`/`Finalize` (step A1). It is also why a coarse
+`tile_size` shows up as a laggy tumble rather than a torn image: correctness never depended on the
+cancellation check being prompt, only responsiveness did.
+
 `IsConverged()`:
 
 ```cpp
@@ -1164,7 +1208,19 @@ Mirror each as a `TfGetEnvSetting` env var (`HDWEEKEND_SAMPLES_TO_CONVERGENCE`, 
 **Settings are polled, not pushed** (§9): the render pass compares
 `renderDelegate->GetRenderSettingsVersion()` against a cached value and re-reads *every* setting
 with `GetRenderSetting<T>(token, fallback)` when it changes. That is branch 2 of `_Execute`, which
-you already stubbed in step A4.
+you already stubbed in step A4 — **the stubbed `SetSamplesToConvergence(1)` goes away here.** The
+version is one counter for the whole map, so there is no way to tell which setting moved; re-read
+all of them.
+
+Two details worth getting right the first time:
+
+- `threadLimit` must go through **`WorkSetConcurrencyLimitArgument(int)`**, not
+  `WorkSetConcurrencyLimit(unsigned)`. The token's convention is 0 = all cores and negative =
+  all-but-*n*, and the unsigned overload reads both as enormous thread counts.
+- The delegate's settings version starts at **1** (`hd/renderDelegate.cpp:39`) and the pass caches
+  **0**, so branch 2 fires on the very first `_Execute` — the same trick as `_sceneVersion`. The
+  renderer's constructor still wants seeding from `HdWeekendConfig`, though, so the pre-poll state
+  is never a different number from the one the settings panel opens on.
 
 ## Step C5 — `GetRenderStats` and pause/stop
 

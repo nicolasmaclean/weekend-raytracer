@@ -28,7 +28,7 @@ public:
 
   int32_t instance_id = -1;
 
-  void commit() override { proto->commit(); }
+  void commit(uint64_t epoch) override { proto->commit(epoch); }
 
   bool hit(const ray &r, interval clipping_range, hit_info &info) const override
   {

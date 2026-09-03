@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -18,11 +19,11 @@ public:
 
   void clear() { objects.clear(); }
 
-  void commit() override
+  void commit(uint64_t epoch) override
   {
     for (const auto &obj : objects)
     {
-      obj->commit();
+      obj->commit(epoch);
     }
   }
 

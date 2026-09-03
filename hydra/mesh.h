@@ -10,6 +10,7 @@
 #include <pxr/base/vt/types.h>
 #include <pxr/imaging/hd/meshTopology.h>
 #include <pxr/base/gf/matrix4d.h>
+#include <vector>
 
 #include "tracer/instance.h"
 #include "tracer/mesh.h"
@@ -64,10 +65,11 @@ private:
   VtVec3fArray _points;
   HdMeshTopology _topology;
   GfMatrix4d _transform{1.0};
+  GfVec3f _displayColor{0.8F, 0.8F, 0.8F};
 
   shared_ptr<mesh> _mesh;
-  shared_ptr<instance> _instance;
-  prim_handle _handle = null_prim;
+  std::vector<shared_ptr<instance>> _instances;
+  std::vector<prim_handle> _handles;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

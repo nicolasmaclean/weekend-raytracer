@@ -9,6 +9,22 @@
                         ],
                         "displayName": "Weekend",
                         "priority": 99
+                    },
+                    "HdWeekend_ImplicitSurfaceSceneIndexPlugin": {
+                        "bases": [
+                            "HdSceneIndexPlugin"
+                        ],
+                        "displayName": "Scene Index to turn implicit surfaces into meshes for hdWeekend",
+                        "loadWithRenderer": "Weekend",
+                        "priority": 0
+                    },
+                    "HdWeekend_ExtComputationSceneIndexPlugin": {
+                        "bases": [
+                            "HdSceneIndexPlugin"
+                        ],
+                        "displayName": "Scene Index to resolve ext computation primvars for hdWeekend",
+                        "loadWithRenderer": "Weekend",
+                        "priority": 0
                     }
                 }
             },

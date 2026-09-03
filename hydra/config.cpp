@@ -33,6 +33,10 @@ TF_DEFINE_ENV_SETTING(HDWEEKEND_JITTER_CAMERA, HdWeekendDefaultJitterCamera,
                       "Should camera rays be jittered within the pixel for antialiasing? Turning this"
                       " off makes two renders of the same scene compare exactly.");
 
+TF_DEFINE_ENV_SETTING(HDWEEKEND_ENABLE_SCENE_COLORS, HdWeekendDefaultEnableSceneColors,
+                      "Should a mesh's authored displayColor primvar drive its albedo? Off renders"
+                      " every mesh as the same grey.");
+
 TF_DEFINE_ENV_SETTING(HDWEEKEND_PRINT_CONFIGURATION, false,
                       "Should hdWeekend print its resolved configuration on startup?");
 
@@ -46,6 +50,7 @@ HdWeekendConfig::HdWeekendConfig()
   randomNumberSeed = TfGetEnvSetting(HDWEEKEND_RANDOM_NUMBER_SEED);
   tileSize = std::max(1, TfGetEnvSetting(HDWEEKEND_TILE_SIZE));
   jitterCamera = TfGetEnvSetting(HDWEEKEND_JITTER_CAMERA);
+  enableSceneColors = TfGetEnvSetting(HDWEEKEND_ENABLE_SCENE_COLORS);
 
   if (TfGetEnvSetting(HDWEEKEND_PRINT_CONFIGURATION))
   {
@@ -55,6 +60,7 @@ HdWeekendConfig::HdWeekendConfig()
               << "  randomNumberSeed     = " << randomNumberSeed << "\n"
               << "  tileSize             = " << tileSize << "\n"
               << "  jitterCamera         = " << jitterCamera << "\n"
+              << "  enableSceneColors    = " << enableSceneColors << "\n"
               << std::flush;
   }
 }

@@ -21,6 +21,7 @@ struct render_stats
   double ms = 0;
   int completed_samples = 0;
   bool stopped = false; // true when render was aborted
+  bool valid = true;
 };
 
 struct renderer
@@ -44,11 +45,12 @@ struct renderer
 
     if (!validate(cam, aovs))
     {
+      stats.valid = false;
       return stats;
     }
 
     _completed_samples.store(0);
-    world.commit();
+    world.commit(++_commit_epoch);
 
     for (const aov_binding &b : aovs)
     {
@@ -260,6 +262,7 @@ struct renderer
 
 private:
   std::atomic<int> _completed_samples{0};
+  uint64_t _commit_epoch = 0;
 
   static bool validate(const camera &cam, const aov_bindings &aovs)
   {

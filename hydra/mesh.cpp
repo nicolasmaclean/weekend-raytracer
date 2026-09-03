@@ -4,14 +4,20 @@
 // https://openusd.org/license.
 
 #include <pxr/base/vt/types.h>
+#include <pxr/imaging/hd/changeTracker.h>
+#include <pxr/imaging/hd/instancer.h>
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/imaging/hd/meshUtil.h>
+#include <pxr/imaging/hd/renderIndex.h>
+#include <pxr/imaging/hd/renderDelegate.h>
 
+#include "hydra/instancer.h"
 #include "tracer/material.h"
 
 #include "convert.h"
 #include "mesh.h"
 #include "renderParam.h"
+#include "config.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -46,10 +52,25 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
   const bool normalsDirty = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->normals);
   const bool transformDirty = HdChangeTracker::IsTransformDirty(*dirtyBits, id);
   const bool visibilityDirty = HdChangeTracker::IsVisibilityDirty(*dirtyBits, id);
+  const bool colorDirty = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->displayColor);
 
   if (pointsDirty)
   {
-    _points = sceneDelegate->Get(id, HdTokens->points).Get<VtVec3fArray>();
+    // A computation-backed `points` that no scene index resolved into a plain
+    // array arrives as an empty VtValue, and Get<VtVec3fArray>() on that is
+    // undefined behaviour rather than an error - which is how a skinned mesh
+    // segfaults the delegate when the ext-computation scene index is missing.
+    const VtValue value = sceneDelegate->Get(id, HdTokens->points);
+    if (value.IsHolding<VtVec3fArray>())
+    {
+      _points = value.UncheckedGet<VtVec3fArray>();
+    }
+    else
+    {
+      TF_WARN("%s: `points` holds %s, not a Vec3fArray - dropping the geometry", id.GetText(),
+              value.GetTypeName().c_str());
+      _points = VtVec3fArray();
+    }
   }
   if (topologyDirty)
   {
@@ -68,12 +89,55 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
     _UpdateVisibility(sceneDelegate, dirtyBits); // sets _sharedData.visible
   }
 
+  _UpdateInstancer(sceneDelegate, dirtyBits);
+  HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), GetInstancerId());
+  const bool instancerDirty = HdChangeTracker::IsInstancerDirty(*dirtyBits, id);
+
+  const HdWeekendConfig &config = HdWeekendConfig::GetInstance();
+  const bool enableSceneColors = config.enableSceneColors;
+  if (colorDirty && enableSceneColors)
+  {
+    const VtValue v = sceneDelegate->Get(id, HdTokens->displayColor);
+    if (v.IsHolding<VtVec3fArray>())
+    {
+      // Constant and vertex-interpolated collapse to the same thing here: element
+      // 0. Per-vertex interpolation is 0.4.0 and needs hdEmbree's sampler.h.
+      const auto &a = v.UncheckedGet<VtVec3fArray>();
+      if (!a.empty()) _displayColor = a[0];
+    }
+    else if (v.IsHolding<GfVec3f>())
+    {
+      _displayColor = v.UncheckedGet<GfVec3f>();
+    }
+  }
+
   // case: on first sync
-  if (!_mesh)
+  const bool createdMesh = !_mesh;
+  if (createdMesh)
   {
     _mesh = make_shared<mesh>();
-    _mesh->mat = make_shared<lambert>(color(0.8, 0.8, 0.8));
-    _instance = make_shared<instance>(_mesh, ToMat4(_transform));
+    _mesh->mat = make_shared<lambert>(ToColor(_displayColor));
+  }
+
+  // An un-instanced prim is the N == 1 case with instance transform I, so the
+  // insert loop below has exactly one shape.
+  const bool xformsDirty = createdMesh || instancerDirty || transformDirty;
+  VtMatrix4dArray transforms;
+  if (xformsDirty)
+  {
+    if (GetInstancerId().IsEmpty())
+    {
+      transforms.push_back(GfMatrix4d(1.0));
+    }
+    else
+    {
+      auto *instancer =
+          static_cast<HdWeekendInstancer *>(sceneDelegate->GetRenderIndex().GetInstancer(GetInstancerId()));
+      if (TF_VERIFY(instancer))
+      {
+        transforms = instancer->ComputeInstanceTransforms(id);
+      }
+    }
   }
 
   std::vector<vec3> verts;
@@ -115,15 +179,6 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
   // publish changes to the sceneQ
   {
     scene_edit edit = param->AcquireSceneForEdit();
-    if (_handle == null_prim)
-    {
-      _handle = edit.insert(_instance);
-    }
-
-    // The primId AOV wants the id hydra picks with, not our slot handle.
-    // HdRenderIndex has already pushed DirtyPrimID into _primId by now, and
-    // re-stamping an int is cheaper than testing the bit for it.
-    edit.set_prim_id(_handle, GetPrimId());
 
     if (pointsDirty)
     {
@@ -136,12 +191,57 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
       _mesh->face = std::move(face);
     }
 
-    if (transformDirty)
+    // tris index into verts, so a topology published without the points it was
+    // authored against is a read past the end of `verts` in mesh::commit.
+    if (_mesh->verts.empty())
     {
-      _instance->set_transform(ToMat4(_transform));
+      _mesh->tris.clear();
+      _mesh->face.clear();
     }
 
-    edit.set_visible(_handle, _sharedData.visible);
+    if (colorDirty && !createdMesh)
+    {
+      _mesh->mat = make_shared<lambert>(ToColor(_displayColor));
+    }
+
+    if (xformsDirty)
+    {
+      // An instanced prim owns N slots, not one. Shrink first, then grow.
+      for (size_t i = transforms.size(); i < _handles.size(); i++)
+      {
+        edit.remove(_handles[i]);
+      }
+      _handles.resize(transforms.size(), null_prim);
+      _instances.resize(transforms.size());
+
+      for (size_t i = 0; i < transforms.size(); i++)
+      {
+        // Row-vector convention, so the rprim's own transform applies first and
+        // the instance transform after it. mat4 is element-identical to
+        // GfMatrix4d, so do the multiply in Gf and convert once.
+        const mat4 xf = ToMat4(_transform * transforms[i]);
+
+        if (_instances[i])
+        {
+          // In place, for B2.3's reason squared: re-inserting would change N
+          // prim pointers at once, which turns a TLAS refit into a guaranteed
+          // rebuild rather than a merely likely one.
+          _instances[i]->set_transform(xf);
+          continue;
+        }
+
+        // Every instance shares one prototype mesh, and therefore one BLAS.
+        _instances[i] = make_shared<instance>(_mesh, xf);
+        _instances[i]->instance_id = int32_t(i);
+        _handles[i] = edit.insert(_instances[i]);
+      }
+    }
+
+    for (prim_handle h : _handles)
+    {
+      edit.set_prim_id(h, GetPrimId());
+      edit.set_visible(h, _sharedData.visible);
+    }
   }
 
   *dirtyBits &= ~HdChangeTracker::AllSceneDirtyBits;
@@ -149,12 +249,16 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
 
 void HdWeekendMesh::Finalize(HdRenderParam *renderParam)
 {
-  if (_handle == null_prim) return;
+  if (_handles.empty()) return;
 
   auto *param = static_cast<HdWeekendRenderParam *>(renderParam);
   scene_edit edit = param->AcquireSceneForEdit();
-  edit.remove(_handle);
-  _handle = null_prim;
+  for (auto h : _handles)
+  {
+    edit.remove(h);
+  }
+  _handles.clear();
+  _instances.clear();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

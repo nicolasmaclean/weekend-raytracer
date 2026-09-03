@@ -15,6 +15,7 @@
 #include "renderDelegate.h"
 #include "config.h"
 #include "convert.h"
+#include "hydra/instancer.h"
 #include "mesh.h"
 #include "renderBuffer.h"
 #include "renderPass.h"
@@ -47,7 +48,6 @@ HdWeekendRenderDelegate::HdWeekendRenderDelegate(HdRenderSettingsMap const &sett
 
 void HdWeekendRenderDelegate::_Initialize()
 {
-  std::cout << "Creating Weekend RenderDelegate" << std::endl;
   _resourceRegistry = std::make_shared<HdResourceRegistry>();
 
   // §15 mechanism 2. The VtValue's *type* picks the widget in usdview's
@@ -64,6 +64,8 @@ void HdWeekendRenderDelegate::_Initialize()
        VtValue(config.randomNumberSeed)},
       {"Tile size", HdWeekendRenderSettingsTokens->tileSize, VtValue(config.tileSize)},
       {"Jitter camera", HdWeekendRenderSettingsTokens->jitterCamera, VtValue(config.jitterCamera)},
+      {"Enable scene colors", HdWeekendRenderSettingsTokens->enableSceneColors,
+       VtValue(config.enableSceneColors)},
   };
 
   // Fills in any of the above the host did not already pass us in its
@@ -89,7 +91,6 @@ HdWeekendRenderDelegate::~HdWeekendRenderDelegate()
   _renderThread.StopThread();
 
   _resourceRegistry.reset();
-  std::cout << "Destroying Weekend RenderDelegate" << std::endl;
 }
 
 HdRenderSettingDescriptorList HdWeekendRenderDelegate::GetRenderSettingDescriptors() const
@@ -124,15 +125,11 @@ HdResourceRegistrySharedPtr HdWeekendRenderDelegate::GetResourceRegistry() const
   return _resourceRegistry;
 }
 
-void HdWeekendRenderDelegate::CommitResources(HdChangeTracker *tracker)
-{
-  std::cout << "=> CommitResources RenderDelegate" << std::endl;
-}
+void HdWeekendRenderDelegate::CommitResources(HdChangeTracker *tracker) {}
 
 HdRenderPassSharedPtr HdWeekendRenderDelegate::CreateRenderPass(HdRenderIndex *index,
                                                                 HdRprimCollection const &collection)
 {
-  std::cout << "Create RenderPass with Collection=" << collection.GetName() << std::endl;
 
   return HdRenderPassSharedPtr(
       new HdWeekendRenderPass(index, collection, &_renderThread, &_renderer, &_sceneVersion));
@@ -140,8 +137,6 @@ HdRenderPassSharedPtr HdWeekendRenderDelegate::CreateRenderPass(HdRenderIndex *i
 
 HdRprim *HdWeekendRenderDelegate::CreateRprim(TfToken const &typeId, SdfPath const &rprimId)
 {
-  std::cout << "Create Weekend Rprim type=" << typeId.GetText() << " id=" << rprimId << std::endl;
-
   if (typeId == HdPrimTypeTokens->mesh)
   {
     return new HdWeekendMesh(rprimId);
@@ -154,7 +149,6 @@ HdRprim *HdWeekendRenderDelegate::CreateRprim(TfToken const &typeId, SdfPath con
 
 void HdWeekendRenderDelegate::DestroyRprim(HdRprim *rPrim)
 {
-  std::cout << "Destroy Weekend Rprim id=" << rPrim->GetId() << std::endl;
   delete rPrim;
 }
 
@@ -217,13 +211,12 @@ void HdWeekendRenderDelegate::DestroyBprim(HdBprim *bPrim)
 
 HdInstancer *HdWeekendRenderDelegate::CreateInstancer(HdSceneDelegate *delegate, SdfPath const &id)
 {
-  TF_CODING_ERROR("Creating Instancer not supported id=%s", id.GetText());
-  return nullptr;
+  return new HdWeekendInstancer(delegate, id);
 }
 
 void HdWeekendRenderDelegate::DestroyInstancer(HdInstancer *instancer)
 {
-  TF_CODING_ERROR("Destroy instancer not supported");
+  delete instancer;
 }
 
 HdRenderParam *HdWeekendRenderDelegate::GetRenderParam() const

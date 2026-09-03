@@ -5,12 +5,19 @@
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/imaging/hd/tokens.h>
+#include <pxr/base/gf/vec3f.h>
 
 #include "tracer/mat4.h"
 #include "tracer/render_buffer.h"
+#include "tracer/color.h"
 
 using namespace pxr;
 
+
+inline color ToColor(const GfVec3f &c)
+{
+  return {c[0], c[1], c[2]};
+}
 
 inline mat4 ToMat4(const GfMatrix4d &m)
 {

@@ -42,9 +42,20 @@ public:
 
   virtual bool hit(const ray &r, interval clipping_range, hit_info &info) const = 0;
 
-  virtual void commit() {}
+  virtual void commit(uint64_t /* epoch */) {}
 
   // world-space bounding-box
   [[nodiscard]] virtual aabb bounds() const = 0;
+
+protected:
+  uint64_t _commit_epoch = 0;
+
+  bool begin_commit(uint64_t epoch)
+  {
+    if (_commit_epoch == epoch) return false;
+
+    _commit_epoch = epoch;
+    return true;
+  }
 };
 

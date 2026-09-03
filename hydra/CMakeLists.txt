@@ -19,10 +19,14 @@ add_library(hdWeekend SHARED
     renderPass.cpp
     renderer.cpp
     config.cpp
-    mesh.cpp)
+    mesh.cpp
+    implicitSurfaceSceneIndexPlugin.cpp
+    extComputationSceneIndexPlugin.cpp
+    instancer.cpp)
 
 # hdTiny links only hd + tf; hd transitively brings plug, tf, vt, work, hf, TBB::tbb.
-target_link_libraries(hdWeekend PRIVATE hd tf)
+# hdsi is the scene-index filter library the step D1 plugins wrap.
+target_link_libraries(hdWeekend PRIVATE hd tf hdsi)
 
 # Header-only tracer, for T1. Never link the `tracer` target - it would drag in oneTBB.
 target_include_directories(hdWeekend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)

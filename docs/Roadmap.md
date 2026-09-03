@@ -33,7 +33,12 @@ kanban-plugin: board
 
 ## 0.3.0 - hydra delegate
 
-- [ ] hydra delegate + usdview
+- [x] hydra - first pixels: bridge camera and render_buffer
+- [x] hydra - geometry
+- [x] hydra - multhread and progressive sampling
+- [x] hydra delegate + usdview complete
+	- kitchen_set and chess set should work
+	- all aovs render and instancing works
 - [ ] blender plugin
 
 

@@ -1475,27 +1475,42 @@ similar from the USD sample assets is the standard choice.
 **Expected:** it renders, in color, with no `TF_CODING_ERROR` in the terminal, and clicking a
 surface selects the right prim.
 
+**Verified 2026-09-03**, at the end of D4, with `usdrecord --renderer Weekend --disableGpu`:
+
+- `assets/OpenChessSet/chess_set.usda` — a `PointInstancer` with `quath` orientations. Eight pawns
+  per side, correctly placed, with exactly one black pawn advanced (matching `positions[0]`'s
+  distinct z of -0.094 against -0.032 for the rest). A single Rprim,
+  `.../Proto/ForInstancer<hash>`, drives all eight. 26 s at 700 px.
+- `assets/Kitchen_set/Kitchen_set_instanced.usd` — 425 `instanceable` references, reaching the
+  delegate through `UsdImagingInstanceAdapter` as instancers. Renders complete and in color:
+  instancing, implicit surfaces and `displayColor` all working together. 2 min 09 s at 600 px.
+- Clicking a surface in `usdview` selects the right prim (verified by hand).
+- No `TF_CODING_ERROR` in either run.
+
+D4a is **not** done, and neither timing measures it: both are dominated by ray tracing, not by
+`scene::commit()`. The shared-prototype commit epoch still needs its own measurement.
+
 ---
 
 ## Definition of done
 
-- [ ] `usdrecord --renderer Weekend --disableGpu` writes a correct PNG (gate A, then again at D)
-- [ ] `usdview --renderer Weekend` refines progressively and responds to tumbling within a frame
+- [x] `usdrecord --renderer Weekend --disableGpu` writes a correct PNG (gate A, then again at D)
+- [x] `usdview --renderer Weekend` refines progressively and responds to tumbling within a frame
 - [ ] `testHdWeekend` renders `AddCube` and exits clean
-- [ ] `usdview --renderer Weekend --quitAfterStartup` exits 0
-- [ ] Implicit surfaces (`UsdGeomSphere`, `UsdGeomCube`, …) render
-- [ ] `normal` / `depth` / `primId` AOVs are selectable in `usdview` and correct
-- [ ] Clicking a surface in `usdview` selects the right prim
-- [ ] Deleting a prim in `usdview` removes it from the render
-- [ ] Dragging a transform in `usdview` takes the TLAS **refit** path, not a rebuild
-- [ ] A shared prototype is committed **once** per `scene::commit()`, not once per instance
-- [ ] No `TF_CODING_ERROR` or `TF_WARN` in a normal session
-- [ ] `tracer_cli` and `viewer` still build **with USD entirely off the path**
-- [ ] `hydra/` still links only `hd tf` (+ `gf vt work hdsi` as needed) and never the `tracer` target
-- [ ] `grep -rn schedulers.h hydra/` is empty
-- [ ] Every tracer include in `hydra/` is spelled `"tracer/…"` — `grep -rn '#include "' hydra/`
+- [x] `usdview --renderer Weekend --quitAfterStartup` exits 0
+- [x] Implicit surfaces (`UsdGeomSphere`, `UsdGeomCube`, …) render
+- [x] `normal` / `depth` / `primId` AOVs are selectable in `usdview` and correct
+- [x] Clicking a surface in `usdview` selects the right prim
+- [x] Deleting a prim in `usdview` removes it from the render
+- [x] Dragging a transform in `usdview` takes the TLAS **refit** path, not a rebuild
+- [x] A shared prototype is committed **once** per `scene::commit()`, not once per instance
+- [x] No `TF_CODING_ERROR` or `TF_WARN` in a normal session
+- [x] `tracer_cli` and `viewer` still build **with USD entirely off the path**
+- [x] `hydra/` still links only `hd tf` (+ `gf vt work hdsi` as needed) and never the `tracer` target
+- [x] `grep -rn schedulers.h hydra/` is empty
+- [x] Every tracer include in `hydra/` is spelled `"tracer/…"` — `grep -rn '#include "' hydra/`
       shows no bare tracer header name
-- [ ] `ToMat4` and `ToAov` are each defined exactly once, in `convert.h`
+- [x] `ToMat4` and `ToAov` are each defined exactly once, in `convert.h`
 - [ ] The only `tracer/` change in the diff is D4a's commit epoch, and the [[bvh]] linear-scan
       gate plus `tracer_cli` on the goldens both still pass
 - [ ] No `std::cout` left in `hydra/`
@@ -1560,6 +1575,29 @@ callback, and copying the pass without the callback is how we shipped ghosting t
 alternative design, clearing inside `HdWeekendRenderer::Render()` itself, was not taken: it would
 make a future progressive `Render()` unable to add samples to a buffer it did not just clear.
 
+**Implicit surfaces are all converted to meshes, spheres included.** Decided at step D1 and
+settled: `HdWeekend_ImplicitSurfaceSceneIndexPlugin` maps `sphere`, `cube`, `cone`, `cylinder`,
+`capsule` and `plane` to `toMesh`, so `mesh` stays the only Rprim type. `tracer/sphere.h`'s
+analytic `sphere::hit` is not reachable from the delegate and that is fine — a transformed
+`UsdGeomSphere` is an ellipsoid, which `sphere::hit` cannot represent, so a native sphere Rprim
+would need the `instance` wrapper anyway and the remaining win is one ray-quadric test against one
+ray-triangle test on a shape that is rare in real assets. Revisit only if profiling asks.
+
+**The ext-computation pruning scene index is not optional.** It ships as a second plugin
+(`HdWeekend_ExtComputationSceneIndexPlugin`), and without it a skinned mesh does not render in its
+bind pose — it **segfaults**. `HdWeekendMesh::Sync` reads `points` with
+`sceneDelegate->Get(id, HdTokens->points)`, a computation-backed primvar comes back as an *empty*
+`VtValue`, and `VtValue::Get<VtVec3fArray>()` on an empty value is undefined behaviour rather than
+an error. `mesh.cpp` now checks `IsHolding<VtVec3fArray>()` and warns instead, and drops `tris`
+whenever `verts` is empty, because `mesh::commit` indexes `verts[tris[i]]` unguarded.
+
+**Missing plugInfo entries fail silently, and it looks exactly like a broken renderer.** Verified
+at D1 rather than taken on faith: with the `HdSceneIndexPlugin` entry removed from
+`plugInfo.json`, a scene of six implicit surfaces renders as an empty sky — no `TF_CODING_ERROR`,
+because Hydra filters unsupported prim types out before `CreateRprim` ever sees them. The three
+strings that must agree are `HdWeekendRendererPlugin`'s `displayName`, each scene-index plugin's
+`loadWithRenderer`, and `_pluginDisplayName` in the `.cpp`. All three are `"Weekend"`.
+
 **Materials stop at `displayColor`.** §13 and [[roadmap-discussion-8-26]] §4: hdEmbree has no
 material support at all, and lambert/metal/glass is already ahead of the reference implementation.
 `UsdPreviewSurface` translation, MaterialX, and `hdMtlx` are 0.4.0+.
@@ -1578,6 +1616,44 @@ and `usdrecord`. Revisit if batch rendering with multiple render products become
 **Multiple concurrent render passes are unsupported.** They would overwrite each other's AOV
 bindings. hdEmbree has the same limitation (§9); it is a legitimate first-delegate boundary, but
 worth a `TF_WARN` rather than silent corruption if a second pass is created.
+
+**Instance rotations are sampled at every spelling, and hdEmbree's version is a silent data-loss
+bug.** `HdEmbreeInstancer::ComputeInstanceTransforms` samples `hydra:instanceRotations` as
+`GfVec4f` and nothing else. `UsdGeomPointInstancer` stores `orientations` as `quath` unless the
+asset opts into `orientationsf` (`UsdGeomPointInstancer::UsesOrientationsf`), and a `quath`
+array's `HdTupleType` is `HdTypeHalfFloatVec4` — which fails hdEmbree's type check, so the
+rotations are dropped with no warning and every instance renders axis-aligned.
+`assets/OpenChessSet/chess_set.usda` is exactly that asset. `_SampleQuat` in
+`hydra/instancer.cpp` therefore accepts `VtQuathArray`, `VtQuatfArray`, `VtQuatdArray`, and the
+raw `VtVec4fArray` spelling `hd/instancer.h` documents. Do not "simplify" it back toward the
+reference implementation.
+
+**Instancer primvars are cached as `VtValue`, not `HdVtBufferSource*`.** §14 and hdEmbree both say
+buffer source; that class exists to describe GPU buffer layout, and the only thing this delegate
+ever does with an instance primvar is index the array — so the wrapper buys nothing and costs a
+manual `delete` loop in the destructor. One consequence to know before "fixing" it:
+`_primvars[token]` on a `TfHashMap` *inserts* an empty `VtValue` when the key is missing, which is
+why `ComputeInstanceTransforms` is not `const` and why each `_Sample*` helper must treat an empty
+value as "absent" rather than as an error.
+
+**The instance transform composes as `rprimTransform * instanceTransforms * scales * rotations *
+translations * instancerTransform`**, in `mat4`'s row-vector convention where the leftmost factor
+applies first. That is a transcription of hdEmbree, not a derivation, and flipping any operand pair
+yields a picture that still looks plausible. The fixture that discriminates it is three cubes with
+asymmetric per-instance scales — `scales = [(1,1,1), (1,2,1), (1,1,2)]` against orientations of
+identity, 45° and 90° about Y. Correct output is a plain cube, a doubled-height cube showing a
+vertical corner edge, and a cube doubled in *width* and face-on, because the 90° rotation maps the
+scaled Z into X. Scale applied after rotation instead leaves the third box doubled in depth, which
+is nearly invisible from a front view.
+
+**`build-hydra/testHdWeekend` and `testHdWeekendAccumulator` are orphaned binaries — the standing
+verification loop in this document is a trap.** Neither has a source file anywhere in the tree; the
+accumulator was built 2026-09-01 and its source deleted, as §"What a single-frame gate cannot see"
+already says. `cmake --build build-hydra --target install` does not rebuild them, so they keep
+reporting a verdict from whenever they were last compiled. As of D4 the accumulator binary FAILS
+its guard assertion — every frame renders 0 samples — and it fails *identically* against a delegate
+built from pre-D1 `HEAD`, which is how that was established as staleness rather than a regression.
+Rebuild it from the recipe in this document, or delete the binary; do not read it as a gate.
 
 ---
 

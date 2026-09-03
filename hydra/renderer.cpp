@@ -163,7 +163,7 @@ void HdWeekendRenderer::Render(HdRenderThread *thread)
   // renderer::render() returns an empty render_stats when validate() rejects the
   // state - empty bindings, mismatched buffer sizes, or a data window outside the
   // buffer. Silent otherwise, and the symptom is an all-black frame.
-  if (stats.completed_samples == 0)
+  if (!stats.valid)
   {
     TF_WARN("Weekend rendered 0 samples: %zu aov binding(s), data window (%d, %d)-(%d, %d)", _aovs.size(),
             _cam.data_window.min_x, _cam.data_window.min_y, _cam.data_window.max_x, _cam.data_window.max_y);

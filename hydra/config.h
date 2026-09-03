@@ -15,7 +15,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 ///
 #define HDWEEKEND_RENDER_SETTINGS_TOKENS                                                                     \
   ((maxBounces, "hdWeekend:maxBounces"))((randomNumberSeed, "hdWeekend:randomNumberSeed"))(                  \
-      (tileSize, "hdWeekend:tileSize"))((jitterCamera, "hdWeekend:jitterCamera"))
+      (tileSize, "hdWeekend:tileSize"))((jitterCamera, "hdWeekend:jitterCamera"))(                           \
+      (enableSceneColors, "hdWeekend:enableSceneColors"))
 
 TF_DECLARE_PUBLIC_TOKENS(HdWeekendRenderSettingsTokens, HDWEEKEND_RENDER_SETTINGS_TOKENS);
 
@@ -29,6 +30,7 @@ constexpr int HdWeekendDefaultMaxBounces = 20;
 constexpr int HdWeekendDefaultRandomNumberSeed = -1;
 constexpr int HdWeekendDefaultTileSize = 8;
 constexpr bool HdWeekendDefaultJitterCamera = true;
+constexpr bool HdWeekendDefaultEnableSceneColors = true;
 
 // 0 means "all cores". There is deliberately no HDWEEKEND_THREAD_LIMIT: Work
 // already reads PXR_WORK_THREAD_LIMIT, and a second variable for the same knob
@@ -89,6 +91,8 @@ public:
   ///
   /// Override with *HDWEEKEND_JITTER_CAMERA*.
   bool jitterCamera = HdWeekendDefaultJitterCamera;
+
+  bool enableSceneColors = HdWeekendDefaultEnableSceneColors;
 
 private:
   // Reads the environment, clamps to valid ranges, and optionally prints.

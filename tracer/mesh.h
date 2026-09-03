@@ -42,8 +42,10 @@ public:
 
   [[nodiscard]] aabb bounds() const override { return accel.bounds(); }
 
-  void commit() override
+  void commit(uint64_t epoch) override
   {
+    if (!begin_commit(epoch)) return;
+
     const size_t count = triangle_count();
 
     geom.clear();

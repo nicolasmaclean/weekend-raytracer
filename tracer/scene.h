@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <vector>
@@ -27,7 +28,7 @@ public:
   [[nodiscard]] size_t slot_count() const { return _slots.size(); }
   [[nodiscard]] size_t draw_count() const { return _draw.size(); }
 
-  void commit() override
+  void commit(uint64_t epoch) override
   {
     if (!_dirty.exchange(false, std::memory_order_acq_rel))
     {
@@ -42,7 +43,7 @@ public:
     {
       if (r.prim == nullptr) continue;
 
-      r.prim->commit();
+      r.prim->commit(epoch);
       if (r.visible)
       {
         visible.push_back({r.prim.get(), r.prim_id});

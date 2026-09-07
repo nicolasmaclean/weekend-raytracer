@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 set -e
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."

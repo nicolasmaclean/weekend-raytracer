@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # core library
 add_library(tracer INTERFACE)
 target_include_directories(tracer INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

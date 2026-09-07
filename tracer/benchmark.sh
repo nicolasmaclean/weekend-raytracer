@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # builds the benchmark config, see /benchmark.ipynb for actually running and analyzing data
 
 echo "Build"

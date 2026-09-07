@@ -2,6 +2,12 @@
 //
 // Licensed under the terms set forth in the LICENSE.txt file available at
 // https://openusd.org/license.
+//
+// SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// Modifications to this file are licensed GPL-3.0-or-later. The original Pixar
+// material remains under the Tomorrow Open Source Technology License 1.0.
 
 #pragma once
 

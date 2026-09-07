@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "pxr/imaging/hd/retainedDataSource.h"
 #include "pxr/imaging/hd/sceneIndexPluginRegistry.h"
 #include "pxr/imaging/hd/tokens.h"

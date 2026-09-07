@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 project(tracer)
 

@@ -45,4 +45,9 @@
 /docs/.trash
 /docs/.obsidian/workspace.json
 /build-hydra
+/build-hydra-blender
 
+# Pixar's USD Kitchen Set is under an EULA that forbids redistribution
+# (LICENSE.txt §3(e)), so it is fetched locally, never committed.
+# See assets/README.md for the one-liner.
+/assets/Kitchen_set/

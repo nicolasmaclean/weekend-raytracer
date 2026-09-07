@@ -1,15 +1,34 @@
 ## Ideas
 
-Wrapping my CPU ray tracer as a hydra delegate
+- Making my hydra delegate work in blender!
+- bvh
+- triangle mesh (soa vs aos)
+- making data types that bit-identical for memcpy when dealing with translation layers like hydra (mat4, render_buffer, etc.)
+- linux, vim motions, nvim, and qtile?
 
 ---
+
 ## Draft
 
+My ray tracer now shows up in the renderer dropdown in Pixar's usdview, right next to Storm and Embree. I didn't touch a line of usdview to get it there.
 
+USD Hydra is the interface that sits between DCC (like Blender, Maya, Houdini) and my renderer. I wrote ~2,000 lines of translation code that lets any app that speaks Hydra use it. 
+
+Next up: a Blender plugin. Hydra plugins are ABI-locked to the exact USD build they compile against, and Blender ships its own, so the same code needs a different binary per host. 
+
+The goal: artists keep the tools and workflow they already know; the only thing that changes is what's drawing the frame.
+
+(visual: video of usdview. Open renderer menu and select weekend. Show progressive rendering, renderer restart on tubmle, and AOVs)
 
 ---
 
 ## Posted
+
+9/8/26
+
+WIP Draft
+
+---
 
 8/26/26
 

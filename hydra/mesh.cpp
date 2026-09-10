@@ -99,9 +99,20 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
   HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), GetInstancerId());
   const bool instancerDirty = HdChangeTracker::IsInstancerDirty(*dirtyBits, id);
 
+  // Polled from the render settings exactly as the render pass polls its own
+  // (hydra-spec §9), with the config singleton as the fallback - so
+  // HDWEEKEND_ENABLE_SCENE_COLORS is the starting value and the settings panel
+  // overrides it. Reading the singleton directly here made the panel's checkbox
+  // inert: nothing else consumes this setting, so the forwarded value went nowhere.
   const HdWeekendConfig &config = HdWeekendConfig::GetInstance();
-  const bool enableSceneColors = config.enableSceneColors;
-  if (colorDirty && enableSceneColors)
+  const bool enableSceneColors = sceneDelegate->GetRenderIndex().GetRenderDelegate()->GetRenderSetting<bool>(
+      HdWeekendRenderSettingsTokens->enableSceneColors, config.enableSceneColors);
+
+  // Cache the authored colour whenever it is dirty, regardless of the setting: the
+  // flag decides what the material uses, not what we remember. That keeps
+  // _displayColor current while the setting is off, so toggling it back on needs no
+  // second read from the scene delegate.
+  if (colorDirty)
   {
     const VtValue v = sceneDelegate->Get(id, HdTokens->displayColor);
     if (v.IsHolding<VtVec3fArray>())
@@ -122,7 +133,7 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
   if (createdMesh)
   {
     _mesh = make_shared<mesh>();
-    _mesh->mat = make_shared<lambert>(ToColor(_displayColor));
+    _mesh->mat = make_shared<lambert>(ToColor(enableSceneColors ? _displayColor : kDefaultDisplayColor));
   }
 
   // An un-instanced prim is the N == 1 case with instance transform I, so the
@@ -207,7 +218,7 @@ void HdWeekendMesh::Sync(HdSceneDelegate *sceneDelegate, HdRenderParam *renderPa
 
     if (colorDirty && !createdMesh)
     {
-      _mesh->mat = make_shared<lambert>(ToColor(_displayColor));
+      _mesh->mat = make_shared<lambert>(ToColor(enableSceneColors ? _displayColor : kDefaultDisplayColor));
     }
 
     if (xformsDirty)

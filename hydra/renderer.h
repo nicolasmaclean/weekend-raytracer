@@ -41,6 +41,8 @@ public:
   // The render settings, applied by the render pass whenever the delegate's
   // settings version changes. Each clamps the same way config.cpp clamps its
   // env var, because a value from the settings panel never passed through it.
+  [[nodiscard]] int CompletedSamples() const { return _renderer.completed_samples(); }
+  [[nodiscard]] int SamplesToConverge() const { return _renderer.samples_to_converge; }
   void SetSamplesToConvergence(int n) { _renderer.samples_to_converge = std::max(1, n); }
   void SetMaxBounces(int n) { _renderer.max_bounces = std::max(0, n); }
   void SetTileSize(int n) { _renderer.tile_size = std::max(1, n); }
@@ -52,13 +54,13 @@ public:
   // happily use as a literal seed.
   void SetRandomNumberSeed(int s)
   {
-    _renderer.frame_seed = (s < 0) ? uint64_t(std::chrono::steady_clock::now().time_since_epoch().count()) : uint64_t(s);
+    _renderer.frame_seed =
+        (s < 0) ? uint64_t(std::chrono::steady_clock::now().time_since_epoch().count()) : uint64_t(s);
   }
 
   void Clear(); // clear every bound AOV to its clear value
   void MarkAovBuffersUnconverged() { mark_unconverged(_aovs); }
   void Render(HdRenderThread *thread); // stage C; stage A passes nullptr
-  [[nodiscard]] int CompletedSamples() const { return _renderer.completed_samples(); }
 
   scene &Scene() { return _scene; } // reach it only via HdWeekendRenderParam
 

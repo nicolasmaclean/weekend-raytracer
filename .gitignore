@@ -40,6 +40,7 @@
 */build/
 /.venv
 /__pycache__
+**/__pycache__/
 /.cache/
 **/.cache/
 /docs/.trash
@@ -47,7 +48,14 @@
 /build-hydra
 /build-hydra-blender
 
+# blender/build_zip.sh output - the packaged extension zip is a build artifact.
+/dist
+
 # Pixar's USD Kitchen Set is under an EULA that forbids redistribution
 # (LICENSE.txt §3(e)), so it is fetched locally, never committed.
 # See assets/README.md for the one-liner.
 /assets/Kitchen_set/
+
+# Rendered from blender_manifest.toml.in for the Step B3 dev install; Stage G
+# renders its own into a staging dir.
+/blender/weekend_raytracer/blender_manifest.toml

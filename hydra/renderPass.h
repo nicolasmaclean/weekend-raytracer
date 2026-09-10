@@ -66,6 +66,10 @@ private:
   // draw call: anything that changed here restarts the render.
   int _lastSceneVersion;
   int _lastSettingsVersion;
+
+  // enableSceneColors is consumed in HdWeekendMesh::Sync, not here, so unlike every
+  // other setting it needs its previous value kept to detect an actual change.
+  bool _lastEnableSceneColors;
   GfMatrix4d _viewMatrix;
   GfMatrix4d _projMatrix;
   GfRect2i _dataWindow;

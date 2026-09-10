@@ -9,7 +9,9 @@
 // Modifications to this file are licensed GPL-3.0-or-later. The original Pixar
 // material remains under the Tomorrow Open Source Technology License 1.0.
 
+#include "pxr/imaging/hd/changeTracker.h"
 #include "pxr/imaging/hd/renderDelegate.h"
+#include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/renderPassState.h"
 #include "pxr/imaging/hd/tokens.h"
 
@@ -30,6 +32,7 @@ HdWeekendRenderPass::HdWeekendRenderPass(HdRenderIndex *index, HdRprimCollection
       _sceneVersion(sceneVersion),
       _lastSceneVersion(0),
       _lastSettingsVersion(0),
+      _lastEnableSceneColors(HdWeekendConfig::GetInstance().enableSceneColors),
       _viewMatrix(1.0), // == identity
       _projMatrix(1.0), // == identity
       _aovBindings(),
@@ -128,6 +131,28 @@ void HdWeekendRenderPass::_Execute(HdRenderPassStateSharedPtr const &renderPassS
     // HDWEEKEND_ env var: Work already reads PXR_WORK_THREAD_LIMIT.
     WorkSetConcurrencyLimitArgument(renderDelegate->GetRenderSetting<int>(
         HdRenderSettingsTokens->threadLimit, HdWeekendDefaultThreadLimit));
+
+    // enableSceneColors is read by HdWeekendMesh::Sync, not applied to the renderer
+    // here, so a change has to invalidate every mesh already synced: Sync only
+    // re-reads displayColor when that primvar is dirty, and moving a render setting
+    // dirties nothing by itself. Without this the checkbox appears to do nothing
+    // until some unrelated edit happens to re-sync the prim. Guarded on an actual
+    // change so a settings bump for any other key stays free; the bits are consumed
+    // at the next Sync, and the render thread is already stopped above.
+    const bool enableSceneColors = renderDelegate->GetRenderSetting<bool>(
+        HdWeekendRenderSettingsTokens->enableSceneColors, config.enableSceneColors);
+    if (enableSceneColors != _lastEnableSceneColors)
+    {
+      _lastEnableSceneColors = enableSceneColors;
+      HdRenderIndex *renderIndex = GetRenderIndex();
+      HdChangeTracker &tracker = renderIndex->GetChangeTracker();
+      for (SdfPath const &rprimId : renderIndex->GetRprimIds())
+      {
+        // displayColor is not one of the specially-cased primvar names, so
+        // HdChangeTracker::IsPrimvarDirty resolves it against DirtyPrimvar.
+        tracker.MarkRprimDirty(rprimId, HdChangeTracker::DirtyPrimvar);
+      }
+    }
 
     needStartRender = true;
   }

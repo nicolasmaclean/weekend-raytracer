@@ -13,6 +13,8 @@
 #include "pxr/pxr.h"
 #include "pxr/imaging/hd/rendererPlugin.h"
 
+#include "hydra/compat.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -43,8 +45,12 @@ public:
   void DeleteRenderDelegate(HdRenderDelegate *renderDelegate) override;
 
   /// Checks to see if the plugin is supported on the running system.
+#if HDW_HAS_RENDERER_CREATE_ARGS
   bool IsSupported(HdRendererCreateArgs const &rendererCreateArgs,
                    std::string *reasonWhyNot = nullptr) const override;
+#else
+  bool IsSupported(bool gpuEnabled = true) const override;
+#endif
 
 private:
   // This class does not support copying.

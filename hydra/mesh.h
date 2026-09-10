@@ -71,7 +71,11 @@ private:
   VtVec3fArray _points;
   HdMeshTopology _topology;
   GfMatrix4d _transform{1.0};
-  GfVec3f _displayColor{0.8F, 0.8F, 0.8F};
+  // The albedo a mesh falls back to: nothing authored a displayColor, or scene
+  // colours are switched off. Named because Sync now caches the authored value
+  // unconditionally, so _displayColor no longer doubles as "the default".
+  static constexpr GfVec3f kDefaultDisplayColor{0.8F, 0.8F, 0.8F};
+  GfVec3f _displayColor{kDefaultDisplayColor};
 
   shared_ptr<mesh> _mesh;
   std::vector<shared_ptr<instance>> _instances;

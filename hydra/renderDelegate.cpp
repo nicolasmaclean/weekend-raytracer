@@ -108,6 +108,9 @@ VtDictionary HdWeekendRenderDelegate::GetRenderStats() const
 {
   VtDictionary stats;
   stats[HdPerfTokens->numCompletedSamples.GetString()] = _renderer.CompletedSamples();
+
+  const int target = std::max(1, _renderer.SamplesToConverge());
+  stats["percentDone"] = std::min(100.0, 100.0 * double(_renderer.CompletedSamples()) / double(target));
   return stats;
 }
 

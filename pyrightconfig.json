@@ -1,0 +1,54 @@
+{
+    // The add-on is typed against fake-bpy-module (bpy-stubs, bpy_types-stubs, ...) in
+    // .venv. Pinning the interpreter here rather than leaving it to the editor means
+    // `pyright` from a shell and pyright-langserver under nvim resolve bpy identically.
+    "venvPath": ".",
+    "venv": ".venv",
+    "typeCheckingMode": "standard",
+
+    // Vendored third-party sources fetched by cmake; not ours to type-check.
+    "exclude": [
+        "**/__pycache__",
+        ".venv",
+        "build",
+        "build-hydra",
+        "build-hydra-blender",
+        "vendor"
+    ],
+
+    // Scoped to blender/ so the rest of the tree keeps full-strength diagnostics.
+    // Everything switched off below is the stubs failing to model Blender, not a defect
+    // in the add-on - see docs/notes/ for the add-on's own conventions.
+    "executionEnvironments": [
+        {
+            "root": "blender",
+
+            // fake-bpy-module ships stubs and no runtime package, by design: bpy only
+            // exists inside Blender. The stub *is* found, so types, completion and
+            // go-to-definition all work; only the source-of-truth .py is absent.
+            "reportMissingModuleSource": "none",
+
+            // Blender declares properties as annotations whose value is a call:
+            //     samples: bpy.props.IntProperty(name="Samples", default=100)
+            // That is the documented add-on idiom, but an annotation is a type
+            // expression and a call is not legal in one.
+            "reportInvalidTypeForm": "none",
+
+            // self.layout and context.scene are Optional in the stubs. Blender
+            // guarantees both inside draw() and poll(), so narrowing every access
+            // would mean an assert per line that buys nothing.
+            "reportOptionalMemberAccess": "none",
+
+            // Attributes that only exist once register() has run: Scene.hdweekend, the
+            // PointerProperty added in properties.register(), and Panel.COMPAT_ENGINES.
+            // Runtime registration is invisible to a static stub.
+            "reportAttributeAccessIssue": "none",
+
+            // Two stub signatures are wrong where our overrides are right:
+            // get_render_settings is declared "-> None" though Blender consumes the
+            // returned settings dict, and update_render_passes is declared keyword-only
+            // though Blender calls it positionally as (scene, render_layer).
+            "reportIncompatibleMethodOverride": "none"
+        }
+    ]
+}

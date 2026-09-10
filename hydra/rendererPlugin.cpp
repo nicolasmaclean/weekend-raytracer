@@ -14,7 +14,6 @@
 #include "rendererPlugin.h"
 #include "renderDelegate.h"
 
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 
@@ -39,6 +38,7 @@ void HdWeekendRendererPlugin::DeleteRenderDelegate(HdRenderDelegate *renderDeleg
   delete renderDelegate;
 }
 
+#if HDW_HAS_RENDERER_CREATE_ARGS
 bool HdWeekendRendererPlugin::IsSupported(HdRendererCreateArgs const & /*rendererCreateArgs*/,
                                           std::string * /* reasonWhyNot */) const
 {
@@ -46,6 +46,14 @@ bool HdWeekendRendererPlugin::IsSupported(HdRendererCreateArgs const & /*rendere
   // it is supported.
   return true;
 }
+#else
+bool HdWeekendRendererPlugin::IsSupported(bool /* gpuEnabled */) const
+{
+  // Nothing more to check for now, we assume if the plugin loads correctly
+  // it is supported.
+  return true;
+}
+#endif
 
 PXR_NAMESPACE_CLOSE_SCOPE
 

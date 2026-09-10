@@ -85,15 +85,14 @@ struct renderer
       schedule(grid.count(), [&](size_t begin, size_t end)
                { render_tiles(cam, world, aovs, grid, pass, begin, end, control); });
 
-      // 1st pass marks single-pass aov to done
-      if (pass == 0)
+      for (const aov_binding &b : aovs)
       {
-        for (const aov_binding &b : aovs)
+        b.buffer->resolve();
+
+        // 1st pass marks single-pass aov to done
+        if (pass == 0 && !b.buffer->is_multisampled())
         {
-          if (!b.buffer->is_multisampled())
-          {
-            b.buffer->set_converged(true);
-          }
+          b.buffer->set_converged(true);
         }
       }
 
@@ -202,7 +201,7 @@ struct renderer
             case aov::camera_depth:
             {
               if (!did_hit) break;
-              const auto d = float(hit_info.t);
+              const auto d = float(hit_info.t * r.direction().length()); // t is unnormalized
               buffer.write(x, by, 1, &d);
 
               break;

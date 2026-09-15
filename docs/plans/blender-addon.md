@@ -1400,43 +1400,7 @@ consolidate them into a single GPL header: the combined work is GPL-3.0-or-later
 material is still available upstream under TOST 1.0. Both statements need to remain true on the
 face of the file.
 
-### The Kitchen_set problem — partly fixed, one step left
-
-`assets/Kitchen_set/` is under a Pixar EULA, not an open license:
-
-> §1 …a temporary, revocable, non-exclusive, nontransferable, nonsublicensable, nonassignable
-> license to use the USD Kitchen Asset only for your **personal, non-commercial testing** of
-> Pixar's Universal Scene Description technology.
->
-> §3(e) You MAY NOT … **distribute** the USD Kitchen Asset or any Derivative Works without
-> Pixar's written authorization.
-
-And the situation is worse than "before you publish": `github.com/nicolasmaclean/weekend-raytracer`
-is **already public**, and commit `1cabc9c` — which added all 233 files — is **already pushed**.
-So §3(e) is being contravened right now, independent of this task.
-
-**Done:** untracked with `git rm -r --cached` (the files stay on disk — personal testing is
-precisely what the EULA allows), `/assets/Kitchen_set/` added to `.gitignore`, and
-`assets/README.md` documents the fetch. Verified 2026-09-07: `openusd.org/files/Kitchen_set.zip`
-is 2,702,173 bytes, extracts to a `Kitchen_set/` top-level directory, and its 233 files are
-byte-identical to what was tracked.
-
-```bash
-curl -O https://openusd.org/files/Kitchen_set.zip
-unzip -q Kitchen_set.zip -d assets/ && rm Kitchen_set.zip
-```
-
-**Still outstanding — history.** Untracking removes the files from the tip, not from the commits.
-Anyone can still `git checkout 1cabc9c` on the public repo, so the objects are still being
-distributed. Closing it needs a history rewrite plus a force-push, and on an already-public repo
-that also means anything GitHub has cached, and any fork, has to be dealt with separately.
-`1cabc9c` is three commits back, and a `backup-pre-rewrite` branch from a previous rewrite already
-exists, so the mechanics are familiar ground here. The measured scope, the gotchas and the exact
-commands are written up in [[kitchen-set-eula-history-purge]]. This is not a blocker for building the add-on;
-it is a blocker for the repo being in order, and it is the one thing on this page that has nothing
-to do with Blender.
-
-The other four assets are redistributable with attribution and stay committed — StandardShaderBall
+The four test assets are redistributable with attribution and stay committed — StandardShaderBall
 and OpenChessSet (CC BY 4.0), ElephantWithMonochord (CC BY-SA 4.0), Teapot (CC0); see
 `assets/README.md`. Blender's platform requires assets *shipped inside* an add-on to be CC0, but
 none of these ship in the zip, so that rule does not bite.

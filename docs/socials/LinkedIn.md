@@ -10,6 +10,12 @@
 
 ## Draft
 
+---
+
+## Posted
+
+9/8/26
+
 My ray tracer now shows up in the renderer dropdown in Pixar's usdview, right next to Storm and Embree. I didn't touch a line of usdview to get it there.
 
 USD Hydra is the interface that sits between DCC (like Blender, Maya, Houdini) and my renderer. I wrote ~2,000 lines of translation code that lets any app that speaks Hydra use it. 
@@ -18,15 +24,9 @@ Next up: a Blender plugin. Hydra plugins are ABI-locked to the exact USD build t
 
 The goal: artists keep the tools and workflow they already know; the only thing that changes is what's drawing the frame.
 
+![usdview](./media/hydra/hydra_usdview.mp4)
+
 (visual: video of usdview. Open renderer menu and select weekend. Show progressive rendering, renderer restart on tubmle, and AOVs)
-
----
-
-## Posted
-
-9/8/26
-
-WIP Draft
 
 ---
 

@@ -39,12 +39,14 @@ kanban-plugin: board
 - [x] hydra delegate + usdview complete
 	- kitchen_set and chess set should work
 	- all aovs render and instancing works
-- [ ] blender plugin
+- [x] blender plugin
 
 
 ## 0.4.0 - more features!
 
 - [ ] texture mapping
+- [ ] materialX or something for using typical pbr materials from dcc in tracer
+- [ ] ci to auto-compile for multiple blender versions
 
 
 ## Wishlist

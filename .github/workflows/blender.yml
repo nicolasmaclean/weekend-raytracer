@@ -62,3 +62,24 @@ jobs:
 
       - name: Check binary
         run: ci/check_so.sh "build/$TARGET_ID/install/plugin/usd/hdWeekend.so"
+
+      - uses: astral-sh/setup-uv@v10
+
+      - name: Install bpy ${{ matrix.t.blender }}
+        run: |
+          uv venv --python "$PYTHON_MM" .venv-bpy
+          uv pip install --python .venv-bpy/bin/python "bpy==$BPY_VERSION"
+
+      - name: bpy loads
+        # Separate from the smoke test so a missing system library reads as that, not as a
+        # plugin failure. find, not `python -c "import bpy"`: bpy hangs at interpreter teardown.
+        run: |
+          so=$(find .venv-bpy -path '*/site-packages/bpy/__init__*.so' | head -1)
+          ! LD_LIBRARY_PATH="$(dirname "$so")/lib" ldd "$so" | grep 'not found'
+
+      - name: Smoke test
+        env:
+          HDW_PLUGIN_DIR: ${{ github.workspace }}/build/${{ matrix.t.id }}/install/plugin/usd
+          HDW_SMOKE_TIMEOUT: "60"
+          HDW_SMOKE_DIGEST: ${{ matrix.t.smoke_digest }}
+        run: .venv-bpy/bin/python blender/smoke_test.py

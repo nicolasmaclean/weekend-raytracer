@@ -21,7 +21,7 @@ cxx         = 17
 version_min = "4.5.0"
 version_max = "5.0.0"                  # EXCLUSIVE - blender_ext checks >= max
 platforms   = ["linux-x64"]
-# smoke_digest = ""                    # filled in from the first green CI run - Gate C
+smoke_digest = "d8e910b3f3b763d6"     # 16 hex of smoke_test.py's sha256; from ci/local.sh - Gate C
 
 [[target]]
 id          = "5.0"
@@ -35,6 +35,7 @@ cxx         = 17
 version_min = "5.0.0"
 version_max = "5.1.0"
 platforms   = ["linux-x64"]
+smoke_digest = "d8e910b3f3b763d6"
 
 [[target]]
 id          = "5.1"
@@ -48,6 +49,7 @@ cxx         = 20
 version_min = "5.1.0"
 version_max = "5.2.0"
 platforms   = ["linux-x64"]
+smoke_digest = "d8e910b3f3b763d6"
 
 [[target]]
 id          = "5.2"
@@ -61,3 +63,4 @@ cxx         = 20
 version_min = "5.2.0"
 version_max = "5.3.0"
 platforms   = ["linux-x64"]
+smoke_digest = "d8e910b3f3b763d6"

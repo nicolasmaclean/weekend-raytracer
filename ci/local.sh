@@ -16,4 +16,12 @@ sdk=build/sdk/$TARGET_ID build=build/$TARGET_ID
 ci/verify_sdk.sh "$sdk"
 ci/docker_build.sh "$sdk" "$build"
 ci/check_so.sh "$build/install/plugin/usd/hdWeekend.so"
-# Step C1 appends the bpy install + smoke test, Step D1 the package step.
+
+venv=build/venv-$TARGET_ID
+[[ -x "$venv/bin/python" ]] || {
+    uv venv --python "$PYTHON_MM" "$venv"
+    uv pip install --python "$venv/bin/python" "bpy==$BPY_VERSION"
+}
+HDW_PLUGIN_DIR=$PWD/$build/install/plugin/usd HDW_SMOKE_TIMEOUT=60 \
+    "$venv/bin/python" blender/smoke_test.py      # HDW_SMOKE_DIGEST comes from targets.py env
+# Step D1 appends the package step.

@@ -40,13 +40,13 @@ kanban-plugin: board
 	- kitchen_set and chess set should work
 	- all aovs render and instancing works
 - [x] blender plugin
+- [x] ci pipeline to compile and distribute blender add-on
 
 
 ## 0.4.0 - more features!
 
 - [ ] texture mapping
 - [ ] materialX or something for using typical pbr materials from dcc in tracer
-- [ ] ci to auto-compile for multiple blender versions
 
 
 ## Wishlist

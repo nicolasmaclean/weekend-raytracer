@@ -778,11 +778,8 @@ the build tree. Nothing is copied, so `git`-side edits are live:
 
 ```bash
 # Render the dev manifest first - without it the symlink is invisible to Blender (Step B1).
-sed -e "s|@BLENDER_VERSION_MIN@|4.5.0|" \
-    -e "s|@BLENDER_VERSION_MAX@|5.0.0|" \
-    -e "s|@PLATFORMS@|linux-x64|" \
-    blender/weekend_raytracer/blender_manifest.toml.in \
-    > blender/weekend_raytracer/blender_manifest.toml
+# Defaults are the 4.5 row; fails on any placeholder left unrendered.
+blender/render_manifest.sh blender/weekend_raytracer/blender_manifest.toml
 
 EXT=~/.config/blender/4.5/extensions/user_default
 mkdir -p $EXT
@@ -794,6 +791,12 @@ $BLENDER
 # live in blender/weekend_raytracer/, not in blender/ beside blender.sh.
 test -e $EXT/weekend_raytracer && echo "symlink ok" || echo "DANGLING"
 ```
+
+> **9/15 — the inline `sed` is now `blender/render_manifest.sh`** ([[blender-ci]] Step A2). It
+> was a second copy of the render in `build_zip.sh`, and the template gained `@ADDON_VERSION@`;
+> the old `sed` would have left that unrendered, and Blender skips a bad manifest in silence
+> (GATE B note). The script is the one renderer for both, and exits non-zero on any leftover
+> `@…@`.
 
 Enable it in Preferences → Add-ons (search "Weekend"). Confirm the directory Blender actually uses
 with `bpy.utils.user_resource('EXTENSIONS')` if the symlink does not take.

@@ -4,7 +4,7 @@
 # One row per Blender minor. CI's matrix is derived from this file and nothing else
 # (docs/notes/ci.md §2). Every value was verified 2026-09-15 - see docs/plans/blender-ci.md.
 #
-# Adding a Blender version: add a row, push, read which job fails.
+# Adding a Blender version: add a row, run ci/local.sh <id>, read which step fails.
 
 # The add-on version. A v* tag must equal it; untagged builds become <version>-dev+g<sha>.
 addon_version = "0.3.0"

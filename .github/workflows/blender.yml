@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Build, check, smoke-test and package hdWeekend for every row of ci/targets.toml.
+# Design: docs/notes/ci.md. Plan: docs/plans/blender-ci.md.
+# Every step is a ci/ script; ci/local.sh runs the same ones locally.
+name: blender
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.t.outputs.matrix }}
+      version: ${{ steps.t.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: t
+        run: python3 ci/targets.py github >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: targets
+    name: blender ${{ matrix.t.id }} / linux-x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false            # one broken row must not hide the state of the others
+      matrix:
+        t: ${{ fromJSON(needs.targets.outputs.matrix) }}
+    env:
+      TARGET_ID: ${{ matrix.t.id }}
+      BPY_VERSION: ${{ matrix.t.blender }}
+      LIB_BRANCH: ${{ matrix.t.lib_branch }}
+      LIB_SHA: ${{ matrix.t.lib_sha }}
+      USD_NAMESPACE: ${{ matrix.t.namespace }}
+      PYTHON_MM: ${{ matrix.t.python }}
+      CXX_STANDARD: ${{ matrix.t.cxx }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: sdk
+        uses: actions/cache@v6
+        with:
+          path: sdk
+          key: lib-linux_x64-${{ matrix.t.lib_sha }}
+
+      - name: Provision SDK
+        if: steps.sdk.outputs.cache-hit != 'true'
+        run: ci/provision_sdk.sh sdk
+
+      - name: Verify SDK
+        run: ci/verify_sdk.sh sdk
+
+      - name: Build (manylinux_2_28)
+        run: ci/docker_build.sh sdk "build/$TARGET_ID"
+
+      - name: Check binary
+        run: ci/check_so.sh "build/$TARGET_ID/install/plugin/usd/hdWeekend.so"

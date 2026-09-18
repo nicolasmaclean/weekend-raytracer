@@ -11,7 +11,7 @@ addon_version = "0.3.0"
 
 [[target]]
 id          = "4.5"
-blender     = "4.5.13"                 # bpy wheel pin
+blender     = "4.5.14"                 # bpy wheel pin
 lib_branch  = "blender-v4.5-release"
 lib_sha     = "1df155d9de293d4a9f09b94aae2cd94f77b37739"
 usd         = "25.02"

@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: python3 ci/watch.py > report.md
+      - name: Report in the run summary
+        run: |
+          if [[ -s report.md ]]; then cat report.md; else echo "No drift."; fi >> "$GITHUB_STEP_SUMMARY"
       - name: Report as one issue
         env:
           GH_TOKEN: ${{ github.token }}

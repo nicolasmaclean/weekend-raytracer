@@ -18,10 +18,9 @@ ci/docker_build.sh "$sdk" "$build"
 ci/check_so.sh "$build/install/plugin/usd/hdWeekend.so"
 
 venv=build/venv-$TARGET_ID
-[[ -x "$venv/bin/python" ]] || {
-    uv venv --python "$PYTHON_MM" "$venv"
-    uv pip install --python "$venv/bin/python" "bpy==$BPY_VERSION"
-}
+[[ -x "$venv/bin/python" ]] || uv venv --python "$PYTHON_MM" "$venv"
+# Every run, not just on creation: a reused venv must follow a bumped pin. A no-op when it matches.
+uv pip install --python "$venv/bin/python" "bpy==$BPY_VERSION"
 HDW_PLUGIN_DIR=$PWD/$build/install/plugin/usd HDW_SMOKE_TIMEOUT=60 \
     "$venv/bin/python" blender/smoke_test.py      # HDW_SMOKE_DIGEST comes from targets.py env
 

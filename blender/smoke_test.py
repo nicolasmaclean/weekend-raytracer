@@ -4,7 +4,8 @@
 """Headless render through hdWeekend, under bpy-as-module.
 
 Reused verbatim by CI ([[ci]] §5). Reads HDW_PLUGIN_DIR, so one script covers the local
-build tree and a CI-built .so.
+build tree and a CI-built .so. HDW_SMOKE_DIGEST, if set, is asserted against the digest;
+unset or empty only reports it.
 
 Two bpy-as-module facts shape this script; both were measured, and both reproduce with
 stock Cycles, so neither is anything to do with our delegate:
@@ -85,6 +86,11 @@ def main() -> None:
     assert any(v > 0.0 for v in rgb), "render produced an entirely black image"
 
     digest = hashlib.sha256(b"".join(f"{v:.4f}".encode() for v in px)).hexdigest()
+    expected = os.environ.get("HDW_SMOKE_DIGEST")
+    if expected:
+        # Per-row constant from ci/targets.toml. A change on an unchanged tracer means the host
+        # integration (or the compiler) moved - see docs/plans/blender-ci.md Gate C.
+        assert digest[:16] == expected, f"digest {digest[:16]} != expected {expected}"
     print("OK", len(px), "pixels, digest", digest[:16])
 
 

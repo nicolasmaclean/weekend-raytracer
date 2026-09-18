@@ -21,6 +21,7 @@ export BLENDER_BIN=$HOME/opt/blender-4.5.13-linux-x64/blender
 # LD_LIBRARY_PATH, which out-ranks Blender's own RUNPATH and breaks it. See blender/blender.sh.
 export BLENDER=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/blender/blender.sh
 export BLENDER_USD_NAMESPACE=pxrBlender_v25_02          # asserted by cmake, docs/notes/ci.md §2
+export BLENDER_PYTHON=3.11                               # python/include/python3.11, Step A1
 export HDW_BLENDER_INSTALL=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/build-hydra-blender/install
 
 # $BPY_PYTHON is a wrapper for the same reason $BLENDER is: the bpy wheel is the same Blender

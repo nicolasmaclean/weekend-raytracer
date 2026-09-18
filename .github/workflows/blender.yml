@@ -64,6 +64,11 @@ jobs:
         run: ci/check_so.sh "build/$TARGET_ID/install/plugin/usd/hdWeekend.so"
 
       - uses: astral-sh/setup-uv@v10.1.0     # no floating major tags upstream - pin the full version
+        with:
+          # Its cache key has no per-row part, so the four rows race to save one entry holding
+          # a single row's ~370 MB bpy wheel, which every row then restores. PyPI serves the
+          # wheel in seconds; the cache buys nothing.
+          enable-cache: false
 
       - name: Install bpy ${{ matrix.t.blender }}
         run: |

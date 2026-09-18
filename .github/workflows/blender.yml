@@ -109,3 +109,22 @@ jobs:
           name: blender-${{ matrix.t.id }}-linux-x64
           path: dist/*.zip
           if-no-files-found: error
+
+  release:
+    # A v* tag must equal ci/targets.toml's addon_version; the targets job fails otherwise.
+    if: github.ref_type == 'tag'
+    needs: build                  # one red row blocks the release: a missing Blender is a regression
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Draft release
+        # Always a draft: publishing is outward-facing, so a person presses the button.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --draft --title "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"

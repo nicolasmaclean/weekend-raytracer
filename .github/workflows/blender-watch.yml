@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2025-2026 Nick Maclean
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Weekly: report drift between ci/targets.toml and upstream Blender as one issue, edited in place.
+# Design: docs/notes/ci.md §6. Plan: docs/plans/blender-ci.md Step E2.
+# The ci-watch label is created once by hand.
+name: blender-watch
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"        # Mondays; off the hour to dodge the scheduler's rush
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 ci/watch.py > report.md
+      - name: Report as one issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh issue list --label ci-watch --state open --json number -q '.[0].number // empty')
+          if [[ ! -s report.md ]]; then
+            [[ -z "$n" ]] || gh issue close "$n" --comment "No drift as of run $GITHUB_RUN_ID."
+          elif [[ -n "$n" ]]; then
+            gh issue edit "$n" --body-file report.md
+          else
+            gh issue create --title "Blender targets drift" --label ci-watch --body-file report.md
+          fi

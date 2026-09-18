@@ -88,3 +88,24 @@ jobs:
           HDW_SMOKE_TIMEOUT: "60"
           HDW_SMOKE_DIGEST: ${{ matrix.t.smoke_digest }}
         run: .venv-bpy/bin/python blender/smoke_test.py
+
+      - name: Package
+        env:
+          HDW_INSTALL_DIR: build/${{ matrix.t.id }}/install
+          ADDON_VERSION: ${{ needs.targets.outputs.version }}
+          BLENDER_VERSION_MIN: ${{ matrix.t.version_min }}
+          BLENDER_VERSION_MAX: ${{ matrix.t.version_max }}
+          PLATFORMS: linux-x64      # literal: the row's list is for --split-platforms, one day
+          ZIP_NAME: weekend_raytracer-${{ needs.targets.outputs.version }}-blender-${{ matrix.t.id }}-linux-x64.zip
+        # Each row validates with its own bpy's blender_ext.py, so a zip meets its own Blender's rules.
+        run: |
+          export BLENDER_EXT=$(find .venv-bpy -path '*/bl_pkg/cli/blender_ext.py' | head -1)
+          [[ -n "$BLENDER_EXT" ]] || { echo "blender_ext.py not found in bpy wheel" >&2; exit 1; }
+          blender/build_zip.sh
+          python3 "$BLENDER_EXT" validate "dist/$ZIP_NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blender-${{ matrix.t.id }}-linux-x64
+          path: dist/*.zip
+          if-no-files-found: error

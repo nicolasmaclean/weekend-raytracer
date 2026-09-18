@@ -24,4 +24,10 @@ venv=build/venv-$TARGET_ID
 }
 HDW_PLUGIN_DIR=$PWD/$build/install/plugin/usd HDW_SMOKE_TIMEOUT=60 \
     "$venv/bin/python" blender/smoke_test.py      # HDW_SMOKE_DIGEST comes from targets.py env
-# Step D1 appends the package step.
+
+export HDW_INSTALL_DIR=$build/install PLATFORMS=linux-x64 \
+    ZIP_NAME=weekend_raytracer-$ADDON_VERSION-blender-$TARGET_ID-linux-x64.zip
+export BLENDER_EXT=$(find "$venv" -path '*/bl_pkg/cli/blender_ext.py' | head -1)
+[[ -n "$BLENDER_EXT" ]] || { echo "blender_ext.py not found in bpy wheel" >&2; exit 1; }
+blender/build_zip.sh
+"$venv/bin/python" "$BLENDER_EXT" validate "dist/$ZIP_NAME"

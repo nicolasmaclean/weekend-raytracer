@@ -104,7 +104,7 @@ jobs:
           blender/build_zip.sh
           python3 "$BLENDER_EXT" validate "dist/$ZIP_NAME"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: blender-${{ matrix.t.id }}-linux-x64
           path: dist/*.zip

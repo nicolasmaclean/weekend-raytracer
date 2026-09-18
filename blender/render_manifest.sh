@@ -7,7 +7,7 @@
 # CI sets every variable from ci/targets.toml.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-sed -e "s|@ADDON_VERSION@|${ADDON_VERSION:-0.3.0}|" \
+sed -e "s|@ADDON_VERSION@|${ADDON_VERSION:-0.4.0}|" \
     -e "s|@BLENDER_VERSION_MIN@|${BLENDER_VERSION_MIN:-4.5.0}|" \
     -e "s|@BLENDER_VERSION_MAX@|${BLENDER_VERSION_MAX:-5.0.0}|" \
     -e "s|@PLATFORMS@|${PLATFORMS:-linux-x64}|" \

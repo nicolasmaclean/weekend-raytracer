@@ -7,7 +7,7 @@
 # Adding a Blender version: add a row, run ci/local.sh <id>, read which step fails.
 
 # The add-on version. A v* tag must equal it; untagged builds become <version>-dev+g<sha>.
-addon_version = "0.3.0"
+addon_version = "0.4.0"
 
 [[target]]
 id          = "4.5"

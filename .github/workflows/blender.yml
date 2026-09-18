@@ -63,7 +63,7 @@ jobs:
       - name: Check binary
         run: ci/check_so.sh "build/$TARGET_ID/install/plugin/usd/hdWeekend.so"
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.1.0     # no floating major tags upstream - pin the full version
 
       - name: Install bpy ${{ matrix.t.blender }}
         run: |
